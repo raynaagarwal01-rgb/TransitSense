@@ -4,10 +4,10 @@
 
 An interactive Three.js concept showcase of smart-traffic features at a residential crossing and a busy urban junction.
 
-- **S1 — Blind-junction warning:** approach posts turn red for cross traffic, with a sensor-fault fail-safe.
-- **S2 — Ambulance priority:** signals clear the junction and hold green for an ambulance.
-- **S3 — Magnetic signature:** vehicle classes detected by embedded sensors, with example waveforms.
-- **S5 — Predictive parking:** projected free spaces at your arrival time across three zones.
+- **Blind-junction warning:** approach posts turn red for cross traffic, with a sensor-fault fail-safe.
+- **Ambulance priority:** signals clear the junction and hold green for an ambulance.
+- **Magnetic signature:** vehicle classes detected by embedded sensors, with example waveforms.
+- **Predictive parking:** projected free spaces at your arrival time across three zones.
 
 ## Run
 

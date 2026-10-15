@@ -15,16 +15,16 @@ Traffic queues with vehicle-size spacing. The busy junction obeys signals; the
 residential junction yields in arrival order without timed traffic signals.
 
 THE FOUR DEMONSTRATIONS
-S1 — Blind-junction warning: send an approaching car to keep its approach post green and turn the other
+Blind-junction warning: send an approaching car to keep its approach post green and turn the other
 three posts red. All four return to green after the crossing clears. Compare with a departing or parked car. Test the sensor fault to see a
 steady red fail-safe state.
-S2 — Ambulance priority: dispatch an ambulance into the busy four-way intersection.
+Ambulance priority: dispatch an ambulance into the busy four-way intersection.
 Signals first clear traffic, then hold its approach green until it passes.
 A reflected-siren test demonstrates rejection without changing the signal cycle.
-S3 — Magnetic signature: two-wheelers, cars, and trucks pass embedded sensors.
+Magnetic signature: two-wheelers, cars, and trucks pass embedded sensors.
 Counts and example magnetic waveforms update at each detected pass. Choose a
 vehicle and send it through the sensor.
-S5 — Predictive parking: explore a parking building with three zones and one camera
+Predictive parking: explore a parking building with three zones and one camera
 per zone. Change your arrival time and play the projected departures and arrivals.
 Compare spaces free now with spaces expected at arrival. Show or hide the roof.
 
