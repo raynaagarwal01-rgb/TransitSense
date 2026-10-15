@@ -7,7 +7,7 @@ An interactive Three.js concept showcase of smart-traffic features at a resident
 **Live site:** https://raynaagarwal01-rgb.github.io/TransitSense/
 
 - **Junction warning:** approach posts turn red for cross traffic, with a sensor-fault fail-safe.
-- **Ambulance priority:** signals clear the junction and hold green for an ambulance, with a live siren sound (Doppler shift and stereo panning).
+- **Ambulance priority:** signals clear the junction and hold green for an ambulance, with a realistic siren: a slow wail on the open road that switches to the fast yelp near the junction, with Doppler shift, street echo and stereo panning.
 - **Magnetic signature:** vehicle classes detected by an embedded magnetometer, with example waveforms.
 - **Predictive parking:** pick your arrival time and TransitSense predicts *whether* a bay will be free and *which one*, then guides your car to it (or turns it away when the garage is predicted full). A rush-hour mode shows the full-garage case.
 
