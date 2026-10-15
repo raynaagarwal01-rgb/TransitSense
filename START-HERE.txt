@@ -20,13 +20,22 @@ three posts red. All four return to green after the crossing clears. Compare wit
 steady red fail-safe state.
 Ambulance priority: dispatch an ambulance into the busy four-way intersection.
 Signals first clear traffic, then hold its approach green until it passes.
-A reflected-siren test demonstrates rejection without changing the signal cycle.
+The siren plays through your speakers (use the speaker button to mute).
+A reflected-siren test plays a faint echo and demonstrates rejection without changing the signal cycle.
 Magnetic signature: two-wheelers, cars, and trucks pass embedded sensors.
 Counts and example magnetic waveforms update at each detected pass. Choose a
 vehicle and send it through the sensor.
-Predictive parking: explore a parking building with three zones and one camera
-per zone. Change your arrival time and play the projected departures and arrivals.
-Compare spaces free now with spaces expected at arrival. Show or hide the roof.
+Predictive parking: a parking building with three zones and one camera per zone.
+Choose your arrival time: the panel predicts whether a bay will be free when you
+arrive and which one (with a backup), and highlights it. Simulate my arrival replays
+the expected departures and arrivals, then drives your car to the predicted bay.
+Rush hour makes the garage fill up, so you can see the "no bay" case and the
+suggested later arrival time. Show or hide the roof.
+
+REAL HARDWARE
+Click any sensor label marked "i" in the city, or "Hardware & code" in the panel,
+to see the real sensor (3D model), how it works, parts, ESP32 wiring and the
+Arduino code. The same sketches are in the hardware folder.
 
 CONTROLS
 Drag to orbit. Scroll or pinch to zoom. Right-drag to pan.
@@ -39,15 +48,17 @@ The dist directory contains the readable HTML, CSS, JavaScript, pure simulation
 rules, and bundled Three.js library and license; check.mjs and traffic-check.mjs are
 small verification checks. To edit: open files in an editor, and serve the dist
 directory with any static web server. For Python: python3 -m http.server 4173 --directory dist
-Then open http://localhost:4173. To run checks: node check.mjs and node traffic-check.mjs
-No package installation, account, API keys, or build step is required.
+Then open http://localhost:4173. After editing, run node build.mjs to rebuild
+transitsense.html. To run checks: node check.mjs and node traffic-check.mjs
+No package installation, account or API keys are required.
 
 SCOPE
 This is an interactive concept showcase. Vehicles follow simplified straight-through
-routes. Radar, acoustic direction/pitch checks, and waveform inputs are scripted
-illustrations rather than real signal processing. No microphone or camera is used.
-Parking uses synthetic arrivals and departures; the comparison with availability
-now illustrates the idea and is not a measured accuracy claim or trained forecast.
+routes. In the website, sensor readings are scripted illustrations rather than real
+signal processing, and no microphone or camera is used. Parking uses synthetic
+arrival and departure rates; the bay prediction illustrates the method and is not a
+measured accuracy claim. The ESP32 sketches in the hardware folder compile but have
+not been tested on physical hardware.
 Not validated for real-road or emergency-control use.
 
 Built for the requested four-feature showcase, with no landing page or dashboard.
