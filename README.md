@@ -1,6 +1,6 @@
 # TransitSense — 3D Smart City Simulation
 
-![TransitSense preview](Crosslight-preview.jpg)
+![TransitSense preview](transitsense-preview.jpg)
 
 An interactive Three.js concept showcase of smart-traffic features at a residential crossing and a busy urban junction.
 
@@ -13,7 +13,7 @@ An interactive Three.js concept showcase of smart-traffic features at a resident
 
 ## Run
 
-- **Quick:** open `Crosslight.html` (single self-contained file) in a current browser.
+- **Quick:** open `transitsense.html` (single self-contained file) in a current browser.
 - **From source:** `python3 -m http.server 4173 --directory dist`, then open http://localhost:4173.
 
 ## Checks

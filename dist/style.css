@@ -13,3 +13,4 @@
 @media(max-height:720px) and (min-width:701px){.experiment{bottom:112px;padding:15px}.feature-copy{display:none}.intro{top:132px}.intro h1{font-size:30px}.intro p{font-size:11px}}
 
 .world-label.red{border-color:#ff716877}.world-label.red i{background:#ff7168}.status.danger{border-color:#ff716840;background:#ff71680a}.status.danger strong{color:#ff9a86}.status.danger>i{background:#ff7168}
+@media(max-width:700px){.scenario-nav{min-width:0}.scenario-nav button{min-width:0;white-space:normal;justify-content:center;text-align:center;line-height:1.25}}

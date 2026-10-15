@@ -1,7 +1,7 @@
 TRANSITSENSE — 3D SMART CITY SIMULATION
 
 OPEN THE WEBSITE
-Download Crosslight.html from this folder and open it in a current Chrome, Edge,
+Download transitsense.html from this folder and open it in a current Chrome, Edge,
 Firefox, or Safari browser. Google Drive previews do not execute websites: download
 first. Everything needed for the 3D simulation is included in the HTML file.
 Google Fonts is optional; offline, the site uses system fonts.
@@ -35,10 +35,10 @@ The playback control offers 0.5x, 1x, and 2x speeds.
 Reduced-motion preferences start the simulation paused.
 
 SOURCE PROJECT
-Crosslight-source.zip contains the readable HTML, CSS, JavaScript, pure simulation
-rules, bundled Three.js library and license, and small verification checks.
-To edit: unzip, open files in an editor, and serve the dist directory with any static
-web server. For Python: python3 -m http.server 4173 --directory dist
+The dist directory contains the readable HTML, CSS, JavaScript, pure simulation
+rules, and bundled Three.js library and license; check.mjs and traffic-check.mjs are
+small verification checks. To edit: open files in an editor, and serve the dist
+directory with any static web server. For Python: python3 -m http.server 4173 --directory dist
 Then open http://localhost:4173. To run checks: node check.mjs and node traffic-check.mjs
 No package installation, account, API keys, or build step is required.
 
