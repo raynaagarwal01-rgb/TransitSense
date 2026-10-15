@@ -1,4 +1,4 @@
-CROSSLIGHT — 3D SMART CITY SIMULATION
+TRANSITSENSE — 3D SMART CITY SIMULATION
 
 OPEN THE WEBSITE
 Download Crosslight.html from this folder and open it in a current Chrome, Edge,
@@ -10,7 +10,7 @@ THE CITY
 Both intersections exist together: a quiet residential crossing and a busy urban
 junction. The residential lanes are 4.8 m wide with four short red/green warning
 posts and varied detached homes. The busy junction retains four overhead signals.
-Use Both intersections, Residential, or Busy junction to change the camera.
+Use City overview, Residential lanes, or Central junction to change the camera.
 Traffic queues with vehicle-size spacing. The busy junction obeys signals; the
 residential junction yields in arrival order without timed traffic signals.
 

@@ -1,8 +1,10 @@
-# Crosslight — 3D Smart City Simulation
+# TransitSense — 3D Smart City Simulation
 
-![Crosslight preview](Crosslight-preview.jpg)
+![TransitSense preview](Crosslight-preview.jpg)
 
 An interactive Three.js concept showcase of smart-traffic features at a residential crossing and a busy urban junction.
+
+**Live site:** https://raynaagarwal01-rgb.github.io/TransitSense/
 
 - **Blind-junction warning:** approach posts turn red for cross traffic, with a sensor-fault fail-safe.
 - **Ambulance priority:** signals clear the junction and hold green for an ambulance.
