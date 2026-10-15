@@ -1,0 +1,55 @@
+CROSSLIGHT — 3D SMART CITY SIMULATION
+
+OPEN THE WEBSITE
+Download Crosslight.html from this folder and open it in a current Chrome, Edge,
+Firefox, or Safari browser. Google Drive previews do not execute websites: download
+first. Everything needed for the 3D simulation is included in the HTML file.
+Google Fonts is optional; offline, the site uses system fonts.
+
+THE CITY
+Both intersections exist together: a quiet residential crossing and a busy urban
+junction. The residential lanes are 4.8 m wide with four short red/green warning
+posts and varied detached homes. The busy junction retains four overhead signals.
+Use Both intersections, Residential, or Busy junction to change the camera.
+Traffic queues with vehicle-size spacing. The busy junction obeys signals; the
+residential junction yields in arrival order without timed traffic signals.
+
+THE FOUR DEMONSTRATIONS
+S1 — Blind-junction warning: send an approaching car to keep its approach post green and turn the other
+three posts red. All four return to green after the crossing clears. Compare with a departing or parked car. Test the sensor fault to see a
+steady red fail-safe state.
+S2 — Ambulance priority: dispatch an ambulance into the busy four-way intersection.
+Signals first clear traffic, then hold its approach green until it passes.
+A reflected-siren test demonstrates rejection without changing the signal cycle.
+S3 — Magnetic signature: two-wheelers, cars, and trucks pass embedded sensors.
+Counts and example magnetic waveforms update at each detected pass. Choose a
+vehicle and send it through the sensor.
+S5 — Predictive parking: explore a parking building with three zones and one camera
+per zone. Change your arrival time and play the projected departures and arrivals.
+Compare spaces free now with spaces expected at arrival. Show or hide the roof.
+
+CONTROLS
+Drag to orbit. Scroll or pinch to zoom. Right-drag to pan.
+Use the + / - buttons to zoom, 0 to reset the camera, and Space to pause.
+The playback control offers 0.5x, 1x, and 2x speeds.
+Reduced-motion preferences start the simulation paused.
+
+SOURCE PROJECT
+Crosslight-source.zip contains the readable HTML, CSS, JavaScript, pure simulation
+rules, bundled Three.js library and license, and small verification checks.
+To edit: unzip, open files in an editor, and serve the dist directory with any static
+web server. For Python: python3 -m http.server 4173 --directory dist
+Then open http://localhost:4173. To run checks: node check.mjs and node traffic-check.mjs
+No package installation, account, API keys, or build step is required.
+
+SCOPE
+This is an interactive concept showcase. Vehicles follow simplified straight-through
+routes. Radar, acoustic direction/pitch checks, and waveform inputs are scripted
+illustrations rather than real signal processing. No microphone or camera is used.
+Parking uses synthetic arrivals and departures; the comparison with availability
+now illustrates the idea and is not a measured accuracy claim or trained forecast.
+Not validated for real-road or emergency-control use.
+
+Built for the requested four-feature showcase, with no landing page or dashboard.
+Not published to Sites. Sources inspired by the user-provided CityVerse and Road Mesh
+references, with original city geometry and interface.
