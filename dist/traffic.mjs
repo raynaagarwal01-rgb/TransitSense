@@ -5,6 +5,7 @@ export const DISTRICTS=[
   {id:'busy',name:'Civic Square',x:48,z:30,greenDuration:11,demand:6,speed:9,roadWidth:13,laneOffset:2.7,stopLine:16,signalized:true}
 ];
 export function vehicleSize(type){
+  if(type==='Bus')return {length:7.8,width:2.45};
   if(type==='Truck')return {length:5.6,width:2.3};
   if(type==='Two-wheeler')return {length:2.1,width:.85};
   return {length:3.7,width:1.95};
@@ -22,7 +23,7 @@ export function spawnVehicle(traffic,type,routeId,{p=-60,forced=false,departing=
   for(const other of lane){const spacing=(size.length+other.length)/2+FOLLOWING_GAP;
     p=departing?Math.max(p,other.p+spacing):Math.min(p,other.p-spacing);
   }
-  const v={id:traffic.nextId++,type,route,p,...size,lane:route.laneOffset,speed:type==='Truck'?route.speed*.8:route.speed,velocity:0,forced,counted:false,laps:0};
+  const v={id:traffic.nextId++,type,route,p,...size,lane:route.laneOffset,speed:type==='Truck'||type==='Bus'?route.speed*.8:route.speed,velocity:0,forced,counted:false,laps:0};
   traffic.vehicles.push(v);return v;
 }
 export function requestAmbulance(traffic,v){
@@ -80,7 +81,8 @@ export function stepTraffic(traffic,dt){
         if(leader)limit=leader.p-(leader.length+v.length)/2-FOLLOWING_GAP;
         const stop=-j.stopLine-v.length/2;
         if(v.p<=stop+.00001){
-          const exitBlocked=leader&&leader.p-leader.length/2<j.stopLine+v.length+FOLLOWING_GAP;
+          // Keep the box clear only when the car ahead is actually stuck past the junction, not just driving away.
+          const exitBlocked=leader&&leader.p-leader.length/2<j.stopLine+v.length+FOLLOWING_GAP&&leader.p-leader.length/2>-j.stopLine&&leader.velocity<1;
           if((j.signalized?trafficLight(j,route.approach)!=='green':j.reservation!==v.id)||exitBlocked)limit=Math.min(limit,stop);
         }
         const distance=Math.max(0,limit-v.p),targetSpeed=Math.min(v.speed,Math.sqrt(8*distance));

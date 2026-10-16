@@ -1,0 +1,610 @@
+{
+  "version": 1,
+  "author": "TransitSense",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-text",
+      "id": "t1",
+      "top": -330,
+      "left": -560,
+      "attrs": {
+        "text": "1 \u00b7 BLIND-JUNCTION WARNING"
+      }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensorA",
+      "top": -290,
+      "left": -560,
+      "attrs": {
+        "distance": "100"
+      }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensorB",
+      "top": -290,
+      "left": -380,
+      "attrs": {
+        "distance": "100"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "t1a",
+      "top": -200,
+      "left": -530,
+      "attrs": {
+        "text": "Sensor A"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "t1b",
+      "top": -200,
+      "left": -350,
+      "attrs": {
+        "text": "Sensor B"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "jRed",
+      "top": -160,
+      "left": -520,
+      "attrs": {
+        "color": "red"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "jYellow",
+      "top": -160,
+      "left": -470,
+      "attrs": {
+        "color": "yellow"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "jGreen",
+      "top": -160,
+      "left": -420,
+      "attrs": {
+        "color": "green"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "t2",
+      "top": -330,
+      "left": 260,
+      "attrs": {
+        "text": "2 \u00b7 EMERGENCY PRIORITY"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "emergency",
+      "top": -280,
+      "left": 260,
+      "attrs": {
+        "color": "red",
+        "bounce": "0"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "t2a",
+      "top": -230,
+      "left": 262,
+      "attrs": {
+        "text": "Emergency"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "pRed",
+      "top": -290,
+      "left": 400,
+      "attrs": {
+        "color": "red"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "pYellow",
+      "top": -290,
+      "left": 450,
+      "attrs": {
+        "color": "yellow"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "pGreen",
+      "top": -290,
+      "left": 500,
+      "attrs": {
+        "color": "green"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "buzzer",
+      "top": -170,
+      "left": 330,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-text",
+      "id": "t2b",
+      "top": -80,
+      "left": 320,
+      "attrs": {
+        "text": "Shared buzzer"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "t3",
+      "top": 250,
+      "left": -560,
+      "attrs": {
+        "text": "3 \u00b7 VEHICLE COUNTER"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "bike",
+      "top": 300,
+      "left": -560,
+      "attrs": {
+        "color": "green",
+        "bounce": "0"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "t3bike",
+      "top": 350,
+      "left": -560,
+      "attrs": {
+        "text": "Two-wheeler"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "bikeLed",
+      "top": 220,
+      "left": -540,
+      "attrs": {
+        "color": "green"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "car",
+      "top": 300,
+      "left": -430,
+      "attrs": {
+        "color": "blue",
+        "bounce": "0"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "t3car",
+      "top": 350,
+      "left": -430,
+      "attrs": {
+        "text": "Car"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "carLed",
+      "top": 220,
+      "left": -410,
+      "attrs": {
+        "color": "blue"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "heavy",
+      "top": 300,
+      "left": -300,
+      "attrs": {
+        "color": "red",
+        "bounce": "0"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "t3heavy",
+      "top": 350,
+      "left": -300,
+      "attrs": {
+        "text": "Heavy vehicle"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "heavyLed",
+      "top": 220,
+      "left": -280,
+      "attrs": {
+        "color": "red"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "t4",
+      "top": 250,
+      "left": 260,
+      "attrs": {
+        "text": "4 \u00b7 SMART PARKING"
+      }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "parkingSensor",
+      "top": 290,
+      "left": 260,
+      "attrs": {
+        "distance": "100"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "t4a",
+      "top": 380,
+      "left": 290,
+      "attrs": {
+        "text": "Bay sensor"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "eta",
+      "top": 290,
+      "left": 470,
+      "attrs": {
+        "value": "0"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "t4b",
+      "top": 380,
+      "left": 465,
+      "attrs": {
+        "text": "Arrival time"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "sRed",
+      "top": 220,
+      "left": 560,
+      "attrs": {
+        "color": "red"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "sGreen",
+      "top": 220,
+      "left": 610,
+      "attrs": {
+        "color": "green"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "esp:TX",
+      "$serialMonitor:RX",
+      "",
+      []
+    ],
+    [
+      "esp:RX",
+      "$serialMonitor:TX",
+      "",
+      []
+    ],
+    [
+      "sensorA:VCC",
+      "esp:5V",
+      "red",
+      []
+    ],
+    [
+      "sensorA:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "sensorA:TRIG",
+      "esp:5",
+      "green",
+      []
+    ],
+    [
+      "sensorA:ECHO",
+      "esp:34",
+      "blue",
+      []
+    ],
+    [
+      "sensorB:VCC",
+      "esp:5V",
+      "red",
+      []
+    ],
+    [
+      "sensorB:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "sensorB:TRIG",
+      "esp:19",
+      "green",
+      []
+    ],
+    [
+      "sensorB:ECHO",
+      "esp:35",
+      "blue",
+      []
+    ],
+    [
+      "jRed:A",
+      "esp:25",
+      "red",
+      []
+    ],
+    [
+      "jRed:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "jYellow:A",
+      "esp:26",
+      "orange",
+      []
+    ],
+    [
+      "jYellow:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "jGreen:A",
+      "esp:27",
+      "green",
+      []
+    ],
+    [
+      "jGreen:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "emergency:1.l",
+      "esp:4",
+      "red",
+      []
+    ],
+    [
+      "emergency:2.l",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "pRed:A",
+      "esp:32",
+      "red",
+      []
+    ],
+    [
+      "pRed:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "pYellow:A",
+      "esp:33",
+      "orange",
+      []
+    ],
+    [
+      "pYellow:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "pGreen:A",
+      "esp:14",
+      "green",
+      []
+    ],
+    [
+      "pGreen:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "buzzer:1",
+      "esp:13",
+      "purple",
+      []
+    ],
+    [
+      "buzzer:2",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "bike:1.l",
+      "esp:16",
+      "green",
+      []
+    ],
+    [
+      "bike:2.l",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "bikeLed:A",
+      "esp:21",
+      "green",
+      []
+    ],
+    [
+      "bikeLed:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "car:1.l",
+      "esp:17",
+      "blue",
+      []
+    ],
+    [
+      "car:2.l",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "carLed:A",
+      "esp:22",
+      "blue",
+      []
+    ],
+    [
+      "carLed:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "heavy:1.l",
+      "esp:18",
+      "red",
+      []
+    ],
+    [
+      "heavy:2.l",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "heavyLed:A",
+      "esp:23",
+      "red",
+      []
+    ],
+    [
+      "heavyLed:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "parkingSensor:VCC",
+      "esp:5V",
+      "red",
+      []
+    ],
+    [
+      "parkingSensor:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "parkingSensor:TRIG",
+      "esp:2",
+      "green",
+      []
+    ],
+    [
+      "parkingSensor:ECHO",
+      "esp:VP",
+      "blue",
+      []
+    ],
+    [
+      "eta:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "eta:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "eta:SIG",
+      "esp:VN",
+      "green",
+      []
+    ],
+    [
+      "sRed:A",
+      "esp:12",
+      "red",
+      []
+    ],
+    [
+      "sRed:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "sGreen:A",
+      "esp:15",
+      "green",
+      []
+    ],
+    [
+      "sGreen:C",
+      "esp:GND.1",
+      "black",
+      []
+    ]
+  ],
+  "dependencies": {}
+}

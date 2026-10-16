@@ -1,0 +1,177 @@
+{
+  "version": 1,
+  "author": "TransitSense",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 20,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensorA",
+      "top": -104.1,
+      "left": 303.1,
+      "attrs": {
+        "distance": "100"
+      }
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "sensorB",
+      "top": 78.3,
+      "left": 303.1,
+      "attrs": {
+        "distance": "100"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "red",
+      "top": -80,
+      "left": 520,
+      "attrs": {
+        "color": "red"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "yellow",
+      "top": 0,
+      "left": 520,
+      "attrs": {
+        "color": "yellow"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "green",
+      "top": 80,
+      "left": 520,
+      "attrs": {
+        "color": "green"
+      }
+    },
+    {
+      "type": "wokwi-buzzer",
+      "id": "buzzer",
+      "top": 160,
+      "left": 520,
+      "attrs": {}
+    }
+  ],
+  "connections": [
+    [
+      "esp:TX",
+      "$serialMonitor:RX",
+      "",
+      []
+    ],
+    [
+      "esp:RX",
+      "$serialMonitor:TX",
+      "",
+      []
+    ],
+    [
+      "sensorA:VCC",
+      "esp:5V",
+      "red",
+      []
+    ],
+    [
+      "sensorA:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "sensorA:TRIG",
+      "esp:5",
+      "green",
+      []
+    ],
+    [
+      "sensorA:ECHO",
+      "esp:18",
+      "blue",
+      []
+    ],
+    [
+      "sensorB:VCC",
+      "esp:5V",
+      "red",
+      []
+    ],
+    [
+      "sensorB:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "sensorB:TRIG",
+      "esp:19",
+      "green",
+      []
+    ],
+    [
+      "sensorB:ECHO",
+      "esp:21",
+      "blue",
+      []
+    ],
+    [
+      "red:A",
+      "esp:25",
+      "red",
+      []
+    ],
+    [
+      "red:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "yellow:A",
+      "esp:26",
+      "orange",
+      []
+    ],
+    [
+      "yellow:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "green:A",
+      "esp:27",
+      "green",
+      []
+    ],
+    [
+      "green:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "buzzer:1",
+      "esp:13",
+      "green",
+      []
+    ],
+    [
+      "buzzer:2",
+      "esp:GND.1",
+      "black",
+      []
+    ]
+  ],
+  "dependencies": {}
+}
