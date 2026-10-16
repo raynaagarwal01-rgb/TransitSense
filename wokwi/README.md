@@ -14,6 +14,20 @@ about a second:
 Every event also appears in the live feed on the site. **Follow** (top right) makes the site jump
 to the matching demo when an event arrives; turn it off to stay where you are.
 
+## All four on one ESP32
+
+[`transitsense_all/`](transitsense_all/) puts all four systems in a single Wokwi project with one ESP32.
+They run side by side without blocking each other and send the same events as the separate
+projects, so the website works with either. It uses one shared buzzer (the emergency tone wins).
+
+| System | Parts | ESP32 pins |
+|---|---|---|
+| 1 · Junction warning | Sensor A, Sensor B, red / yellow / green LEDs | TRIG 5, 19 · ECHO 34, 35 · LEDs 25, 26, 27 |
+| 2 · Emergency priority | Red button, red / yellow / green LEDs | Button 4 · LEDs 32, 33, 14 |
+| 3 · Vehicle counter | Two-wheeler / car / heavy buttons and LEDs | Buttons 16, 17, 18 · LEDs 21, 22, 23 |
+| 4 · Smart parking | Bay sensor, arrival-time knob, red / green LEDs | TRIG 2 · ECHO VP (36) · knob VN (39) · LEDs 12, 15 |
+| Shared | Buzzer | 13 |
+
 ## How it works
 
 ```
@@ -29,7 +43,7 @@ or the single `transitsense.html` file.
 
 ## Put the sketches in Wokwi
 
-For each of the four projects:
+For the combined project (or each of the four separate ones), in a new or copied Wokwi ESP32 project:
 
 1. Open the Wokwi project and sign in (use **Save a copy** if it isn't yours).
 2. Replace `sketch.ino` and `diagram.json` with the files from this folder.
