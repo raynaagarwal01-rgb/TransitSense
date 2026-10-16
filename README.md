@@ -19,6 +19,13 @@ The [`hardware/`](hardware/) folder holds ESP32 / Arduino sketches for each sens
 (TFmini-S LiDAR, 2× INMP441 microphones, QMC5883L magnetometer, ESP32-CAM) and the Python bay
 predictor that runs on the server. They compile on ESP32 core 3.x but have not been tested on physical hardware yet. See [hardware/README.md](hardware/README.md) for parts and wiring.
 
+## Presenting
+
+- **Guided tour:** the *Guided tour* button (or `?tour` in the URL) plays all four demos with captions; good for a judge or a screen recording.
+- **Night mode:** the moon button next to the zoom controls switches to a night scene with lit windows and streetlights.
+- **About:** the *About* link (or the **?** help dialog on phones) explains the problem, the hardware and the team. Edit the team names in `dist/index.html` (`id="team"`).
+- **Traffic:** buses and police cars join the city traffic, and *Two ambulances at once* shows a second ambulance waiting its turn for priority.
+
 ## Live Wokwi link
 
 The four Wokwi simulations in [`wokwi/`](wokwi/) send their events to the site over MQTT: press the car

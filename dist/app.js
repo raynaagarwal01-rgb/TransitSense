@@ -14,7 +14,7 @@ const config={
  s5:{district:'PARKING HUB',title:'Know your bay<br>before you arrive.',description:'Zone cameras track every bay<br>and predict exactly where you can park.',name:'Predictive parking',copy:'An ESP32-CAM in each zone watches every bay. TransitSense predicts which bay will still be free when you arrive.',location:'Central Park & Ride',type:'Building cutaway · 3 camera zones · entry on the east side',action:'Simulate my arrival',note:'Bay-level prediction from camera history',hw:'camera'}
 };
 let dash=null,current='s1',time=0,paused=matchMedia('(prefers-reduced-motion: reduce)').matches,speed=1,vehicleType='Car',fault=false,priority=null,priorityStart=0,focusCar=null,echoUntil=0,eta=10,forecastActive=false,roofVisible=false;
-let counts={'Two-wheeler':0,Car:0,Truck:0},lastSignature=null,vehicles=[],signals=[],beacons=[],pulses=[],worldLabels=[],slots=[],roof=null,priorityRoute=null,traffic=null,ambulanceCar=null,viewMode='overview',sensorLabel=null;
+let counts={'Two-wheeler':0,Car:0,Truck:0},lastSignature=null,vehicles=[],signals=[],beacons=[],pulses=[],worldLabels=[],slots=[],roof=null,priorityRoute=null,traffic=null,ambulanceCar=null,ambulanceQueue=[],lampSpots=[],nightLamps=[],night=false,viewMode='overview',sensorLabel=null;
 const districtLabels=new Map();
 const siren=createSiren();let sirenPrevDistance=null;
 const scene=new THREE.Scene();scene.background=new THREE.Color('#152733');scene.fog=new THREE.FogExp2('#152733',.0024);
@@ -37,7 +37,7 @@ function flush(){for(const {type,color,emissive,items} of batches.values()){cons
 function meshBox(parent,x,y,z,w,h,d,color,emissive=false){const m=new THREE.Mesh(geos.box,mat(color,emissive));m.position.set(x,y,z);m.scale.set(w,h,d);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m}
 let seed=17;function random(){seed=(seed*16807)%2147483647;return (seed-1)/2147483646}
 function tree(x,z,s=1){shape('cylinder',x,1.6*s,z,.25*s,3.2*s,.25*s,'#635c48');shape('sphere',x,4*s,z,2.1*s,2.6*s,2.1*s,'#547c5e');shape('sphere',x-.6*s,4.7*s,z+.2*s,1.6*s,2*s,1.6*s,'#6a9171')}
-function lamp(x,z){box(x,2.4,z,.13,4.8,.13,'#849496');box(x+.55,4.8,z,1.3,.14,.35,'#adb7af');box(x+.9,4.7,z,.5,.08,.4,'#ffe2a0',0,true);box(x,0.16,z,.5,.22,.5,'#8c9b97')}
+function lamp(x,z){lampSpots.push([x,z]);box(x,2.4,z,.13,4.8,.13,'#849496');box(x+.55,4.8,z,1.3,.14,.35,'#adb7af');box(x+.9,4.7,z,.5,.08,.4,'#ffe2a0',0,true);box(x,0.16,z,.5,.22,.5,'#8c9b97')}
 function house(x,z,r=0){
  const hb=(lx,y,lz,w,h,d,c,e=false)=>box(x+Math.cos(r)*lx+Math.sin(r)*lz,y,z-Math.sin(r)*lx+Math.cos(r)*lz,w,h,d,c,r,e);
  const w=5.2+random()*2.3,d=5.5+random()*2,h=random()<.65?3.2:5.7,roofStyle=Math.floor(random()*3);
@@ -98,6 +98,8 @@ function carFromModel(model,type){
  const g=new THREE.Group();g.add(new THREE.Mesh(model.body,carBodyMaterial),new THREE.Mesh(model.lights,carLightMaterial));g.children[0].castShadow=true;
  if(model.flash){g.userData.flash=model.flash.clone();g.add(g.userData.flash)}g.userData.type=type;return g;
 }
+// City bus: long body, window band, roof and glowing head/tail lights.
+function busModel(key){const g=new THREE.Group();meshBox(g,0,1.35,0,2.4,1.9,7.6,'#d9a648');meshBox(g,0,2.35,0,2.3,.12,7.3,'#ece6d3');for(const side of [-1,1])meshBox(g,side*1.21,1.65,-.2,.03,.62,6.4,'#4b7889');meshBox(g,0,1.7,3.81,2.1,.85,.04,'#4b7889');meshBox(g,0,.75,0,2.42,.14,7.62,'#3f6a74');for(const xx of [-1.2,1.2])for(const zz of [-2.6,2.5])meshBox(g,xx,.4,zz,.24,.5,.75,'#1c2d35');for(const xx of [-.8,.8])meshBox(g,xx,.75,3.82,.32,.18,.04,'#ffdf9a',true);meshBox(g,0,.7,-3.82,1.7,.14,.04,'#ff8f78',true);const model={body:combineCarParts(g,false),lights:combineCarParts(g,true)};carModels.set(key,model);return carFromModel(model,'Bus')}
 function combineCarParts(group,glowing){
  const positions=[],normals=[],colors=[],indices=[];
  for(const part of group.children){
@@ -110,12 +112,12 @@ function combineCarParts(group,glowing){
  }
  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));geometry.setIndex(indices);geometry.computeBoundingSphere();return geometry;
 }
-function car(type='Car',color='#d9ddcb'){const key=type+color;if(carModels.has(key))return carFromModel(carModels.get(key),type);const g=new THREE.Group(),bike=type==='Two-wheeler',truck=type==='Truck',ambulance=type==='Ambulance';const w=bike?.55:truck?2:1.65,l=bike?1.8:truck?5.3:3.4;meshBox(g,0,.65,0,w,.7,l,ambulance?'#e8e7da':color);meshBox(g,0,truck?1.55:1.25,truck?-.7:-.2,w*.86,truck?1.5:.65,truck?3.1:l*.57,ambulance?'#edece2':color);if(!bike){meshBox(g,0,1.3,truck?1.6:1.0,w*.8,.48,.04,'#4b7889');meshBox(g,w*.505,1.25,-.15,.025,.45,l*.45,'#527e8a');meshBox(g,-w*.505,1.25,-.15,.025,.45,l*.45,'#527e8a')}for(const xx of bike?[0]:[-w/2,w/2])for(const zz of [-l*.31,l*.31])meshBox(g,xx,.35,zz,bike?.18:.22,.45,.6,'#1c2d35');if(bike){meshBox(g,0,1.25,-.2,.4,.65,.45,'#4c6064');const head=new THREE.Mesh(geos.sphere,mat('#d0c7a9'));head.scale.set(.23,.23,.23);head.position.set(0,1.75,-.2);g.add(head)}else{for(const xx of [-w*.32,w*.32])meshBox(g,xx,.7,l/2+.02,.27,.16,.04,'#ffdf9a',true);meshBox(g,0,.6,-l/2-.02,w*.7,.13,.04,'#ff8f78',true)}if(ambulance){meshBox(g,0,1.65,0,1.4,.18,.6,'#426672');g.userData.flash=meshBox(g,-.38,1.79,0,.5,.15,.4,'#80d5ff',true);meshBox(g,.38,1.79,0,.5,.15,.4,'#ff6c65',true);meshBox(g,w/2+.02,1.2,0,.04,.75,.23,'#c96151');meshBox(g,w/2+.04,1.2,0,.04,.23,.75,'#c96151')}const model={body:combineCarParts(g,false),lights:combineCarParts(g,true),flash:g.userData.flash};carModels.set(key,model);return carFromModel(model,type)}
+function car(type='Car',color='#d9ddcb'){const key=type+color;if(carModels.has(key))return carFromModel(carModels.get(key),type);if(type==='Bus')return busModel(key);const g=new THREE.Group(),bike=type==='Two-wheeler',truck=type==='Truck',police=type==='Police',ambulance=type==='Ambulance'||police;if(police)color='#e9edf0';const w=bike?.55:truck?2:1.65,l=bike?1.8:truck?5.3:3.4;meshBox(g,0,.65,0,w,.7,l,ambulance?'#e8e7da':color);meshBox(g,0,truck?1.55:1.25,truck?-.7:-.2,w*.86,truck?1.5:.65,truck?3.1:l*.57,ambulance?'#edece2':color);if(!bike){meshBox(g,0,1.3,truck?1.6:1.0,w*.8,.48,.04,'#4b7889');meshBox(g,w*.505,1.25,-.15,.025,.45,l*.45,'#527e8a');meshBox(g,-w*.505,1.25,-.15,.025,.45,l*.45,'#527e8a')}for(const xx of bike?[0]:[-w/2,w/2])for(const zz of [-l*.31,l*.31])meshBox(g,xx,.35,zz,bike?.18:.22,.45,.6,'#1c2d35');if(bike){meshBox(g,0,1.25,-.2,.4,.65,.45,'#4c6064');const head=new THREE.Mesh(geos.sphere,mat('#d0c7a9'));head.scale.set(.23,.23,.23);head.position.set(0,1.75,-.2);g.add(head)}else{for(const xx of [-w*.32,w*.32])meshBox(g,xx,.7,l/2+.02,.27,.16,.04,'#ffdf9a',true);meshBox(g,0,.6,-l/2-.02,w*.7,.13,.04,'#ff8f78',true)}if(ambulance){meshBox(g,0,1.65,0,1.4,.18,.6,'#426672');g.userData.flash=meshBox(g,-.38,1.79,0,.5,.15,.4,'#80d5ff',true);meshBox(g,.38,1.79,0,.5,.15,.4,'#ff6c65',true);if(police){for(const side of [-1,1])meshBox(g,side*(w/2+.02),.75,0,.04,.28,l*.8,'#27477d');meshBox(g,0,1.6,-.2,w*.88,.06,l*.58,'#27477d')}else{meshBox(g,w/2+.02,1.2,0,.04,.75,.23,'#c96151');meshBox(g,w/2+.04,1.2,0,.04,.23,.75,'#c96151')}}const model={body:combineCarParts(g,false),lights:combineCarParts(g,true),flash:g.userData.flash};carModels.set(key,model);return carFromModel(model,type)}
 function spawn(type='Car',routeId='residential-0',p=-60,options={}){
  const v=spawnVehicle(traffic,type,routeId,{p,...options});v.mesh=car(type,['#d1dfd6','#b9c6ce','#ddb27e','#7baca7','#d58d7e'][Math.floor(random()*5)]);world.add(v.mesh);positionVehicle(v);return v;
 }
 function positionVehicle(v){const pos=vehiclePosition(v);v.mesh.position.set(pos.x,.16,pos.z);v.mesh.rotation.y=v.route.angle;v.mesh.visible=v.parked||vehicleOnRoad(v)}
-function ambient(){for(const route of traffic.routes){const j=traffic.junctions.find(j=>j.id===route.junction);if(!j.signalized&&route.approach!==2)continue;for(let i=0;i<j.demand;i++)spawn(i%4===3?'Truck':i%5===4?'Two-wheeler':'Car',route.id,(j.signalized?-25:-56)-i*8)}}
+function ambient(){for(const route of traffic.routes){const j=traffic.junctions.find(j=>j.id===route.junction);if(!j.signalized&&route.approach!==2)continue;for(let i=0;i<j.demand;i++)spawn(j.signalized&&i===2?'Bus':j.signalized&&i===5&&route.approach===1?'Police':i%4===3?'Truck':i%5===4?'Two-wheeler':'Car',route.id,(j.signalized?-25:-56)-i*8)}}
 function surroundings(){
  box(0,-1.05,0,260,1.6,220,'#3b584c');box(0,-.18,0,244,.2,202,'#667970');
  const onRoad=(x,z)=>DISTRICTS.some(j=>(Math.abs(x-j.x)<13&&Math.abs(z-j.z)<78)||(Math.abs(z-j.z)<13&&Math.abs(x-j.x)<78));
@@ -170,7 +172,7 @@ function resetView(mode=viewMode){
  else{$('scene-title').innerHTML=config[current].title;$('scene-description').innerHTML=config[current].description}
 }
 function buildScene(){
- seed=17;world.clear();for(const m of pulses){m.geometry.dispose();m.material.dispose()}worldLabels.forEach(l=>l.el.remove());
+ seed=17;world.clear();lampSpots=[];nightLamps=[];ambulanceQueue=[];for(const m of pulses){m.geometry.dispose();m.material.dispose()}worldLabels.forEach(l=>l.el.remove());
  traffic=createTraffic();vehicles=traffic.vehicles;signals=[];beacons=[];pulses=[];worldLabels=[];slots=[];batches.clear();districtLabels.clear();focusCar=null;ambulanceCar=null;fault=false;priority=null;echoUntil=0;forecastActive=false;roofVisible=false;parkPlay=null;parkMovers=[];counts={'Two-wheeler':0,Car:0,Truck:0};lastSignature=null;
  surroundings();
  const residential=DISTRICTS[0],busy=DISTRICTS[1];
@@ -180,7 +182,7 @@ function buildScene(){
  priorityRoute=new THREE.Mesh(geos.box,new THREE.MeshBasicMaterial({color:'#b6f5a0',transparent:true,opacity:.24,depthWrite:false}));priorityRoute.position.set(busy.x+2.7,.26,busy.z);priorityRoute.scale.set(3,.025,124);priorityRoute.visible=false;world.add(priorityRoute);
  for(const direction of [-1,1]){box(busy.x+direction*2.7,.24,busy.z+direction*3,2.9,.05,2,'#81d2cc',0,true);box(busy.x+direction*2.7,.28,busy.z+direction*3,2.3,.08,.7,'#243e49')}
  label('QMC5883L MAGNETOMETER',busy.x+8,4,busy.z+3,'green','magnetometer');
- flush();garage();flush();ambient();renderPanel();resetView();updateTrafficVisuals();
+ flush();garage();flush();ambient();setNight(night);renderPanel();resetView();updateTrafficVisuals();
 }
 function updateTrafficVisuals(){
  const colors=['#ff493c','#ffc247','#8cfa8c'];
@@ -193,15 +195,24 @@ function status(title,detail,warning=false){if($('status-title').textContent!==t
 function secondary(text,fn){const b=document.createElement('button');b.textContent=text;b.addEventListener('click',fn);$('secondary').appendChild(b);return b}
 function renderPanel(){const c=config[current];$('district').textContent=c.district;$('scene-title').innerHTML=c.title;$('scene-description').innerHTML=c.description;$('feature-title').textContent=c.name;$('feature-copy').textContent=c.copy;$('location-name').textContent=c.location;$('location-type').textContent=c.type;$('trigger-label').textContent=c.action;$('panel-note').textContent=c.note;$('hw-link-name').textContent=SENSORS[c.hw].name;$('extra').innerHTML='';$('secondary').innerHTML='';$('trigger').disabled=false;
  if(current==='s1'){status('Watching the junction','Approaching vehicles activate cross-street warnings.');secondary('Departing car',()=>sendS1(false));secondary('Parked car',()=>{clearFocus();focusCar=spawn('Car','residential-0',-24,{forced:true});focusCar.parked=true;focusCar.p=-24;focusCar.lane=3.6;positionVehicle(focusCar);status('Parked vehicle ignored','No closing motion detected. Warnings stay in standby.')});secondary('Sensor fault',()=>{fault=!fault;status(fault?'Fail-safe warning active':'Sensor restored',fault?'Independent watchdog keeps every post red.':'Directional sensing is back online.',fault)})}
- if(current==='s2'){status('Normal signal cycle','Four approaches alternate with amber and all-red clearance.');$('trigger').disabled=!!traffic.junctions[1].priority;secondary('Test reflected siren',()=>{echoUntil=time+5;siren.echo();status('Reflected siren rejected','Acoustic timing and pitch do not indicate an approach.')});secondary('Reset traffic',()=>buildScene())}
+ if(current==='s2'){status('Normal signal cycle','Four approaches alternate with amber and all-red clearance.');$('trigger').disabled=false;secondary('Two ambulances at once',()=>{if(paused)togglePause();dispatchAmbulance(0);dispatchAmbulance(3)});secondary('Test reflected siren',()=>{echoUntil=time+5;siren.echo();status('Reflected siren rejected','Acoustic timing and pitch do not indicate an approach.')});secondary('Reset traffic',()=>buildScene())}
  if(current==='s3'){$('extra').innerHTML='<div class="stats"><div class="stat"><strong id="count-bike">'+counts['Two-wheeler']+'</strong><span>Two-wheelers</span></div><div class="stat"><strong id="count-car">'+counts.Car+'</strong><span>Cars</span></div><div class="stat"><strong id="count-truck">'+counts.Truck+'</strong><span>Trucks</span></div></div><svg class="waveform" viewBox="0 0 260 52" role="img" aria-label="Simulated magnetic waveform"><path class="wave-grid" d="M0 26h260M65 0v52M130 0v52M195 0v52"/><path id="wave" d="M0 26h260"/></svg><div class="wave-caption"><span id="wave-type">Awaiting a signature</span><span>ΔB / time</span></div>';for(const t of ['Two-wheeler','Car','Truck']){const b=secondary(t,()=>{vehicleType=t;$('trigger-label').textContent='Send '+(t==='Car'?'a car':t==='Truck'?'a truck':'a two-wheeler');document.querySelectorAll('#secondary button').forEach(el=>el.style.borderColor='');b.style.borderColor='var(--accent)'});if(t===vehicleType)b.style.borderColor='var(--accent)'}status('Sensor ready','Each detected pass is counted once.');$('trigger-label').textContent='Send '+(vehicleType==='Car'?'a car':vehicleType==='Truck'?'a truck':'a two-wheeler')}
  if(current==='s5'){$('extra').innerHTML='<label class="arrival" for="eta"><span>Your arrival time</span><strong><span id="eta-label">'+eta+'</span> min from now</strong></label><input id="eta" type="range" min="1" max="30" value="'+eta+'"><div class="parking-stats"><div><span>FREE RIGHT NOW</span><strong id="free-now"></strong></div><div class="predicted"><span>FREE ON ARRIVAL</span><strong id="free-arrival"></strong></div></div><p class="rate-note" id="rate-note"></p><div class="bay-card" id="bay-card"><span class="bay-kicker">PREDICTED BAY FOR YOU</span><div class="bay-main"><strong id="bay-id"></strong><em id="bay-where"></em></div><p id="bay-why"></p></div>';$('eta').addEventListener('input',e=>{eta=Number(e.target.value);if(parkPlay)resetParking();updateForecast()});secondary('Show roof',()=>{roofVisible=!roofVisible;roof.visible=roofVisible;document.querySelector('#secondary button').textContent=roofVisible?'Cutaway view':'Show roof';worldLabels.forEach(l=>{if(l.el.textContent.includes('CAM'))l.el.style.visibility=roofVisible?'hidden':''})});const rush=secondary('Rush hour',()=>{demand=demand==='rush'?'normal':'rush';markRush();if(parkPlay)resetParking();updateForecast()}),markRush=()=>{rush.setAttribute('aria-pressed',demand==='rush');rush.style.borderColor=demand==='rush'?'var(--amber)':''};markRush();secondary('Reset',()=>{resetParking();$('trigger-label').textContent=c.action;updateForecast()});updateForecast()}
 }
 function clearFocus(){if(focusCar){world.remove(focusCar.mesh);vehicles.splice(vehicles.indexOf(focusCar),1);focusCar=null}}
 function sendS1(approach=true){clearFocus();focusCar=spawn('Car',approach?'residential-0':'residential-2',approach?-56:24,{forced:true,departing:!approach});focusCar.outgoing=!approach;if(current==='s1')status(approach?'Vehicle approaching':'Departing vehicle ignored',approach?'Its post stays green; the other three turn red. Vehicles yield before crossing.':'Distance is increasing. The vehicle stays in its correct lane.')}
-function dispatchAmbulance(){
- if(traffic.junctions[1].priority)return false;
- ambulanceCar=spawn('Ambulance','busy-0',-60,{forced:true});requestAmbulance(traffic,ambulanceCar);priority='clearing';priorityStart=time;if(current==='s2'){$('trigger').disabled=true;status('Approaching siren located','North approach · all red until committed traffic has cleared.',true)}sirenPrevDistance=null;siren.start();return true;
+// Ambulances that arrive while another one holds the junction wait their turn (up to 3 queued).
+const APPROACH_NAMES=['North','West','South','East'];
+function dispatchAmbulance(approach=0){
+ if(ambulanceQueue.length>=3)return 'full';
+ const amb=spawn('Ambulance','busy-'+approach,-60,{forced:true});
+ if(traffic.junctions[1].priority||ambulanceQueue.length){ambulanceQueue.push(amb);if(current==='s2')status('Another ambulance queued',APPROACH_NAMES[approach]+' approach · it gets the green as soon as the junction clears.',true);return 'queued'}
+ startPriority(amb);return 'started';
+}
+function startPriority(amb){
+ ambulanceCar=amb;requestAmbulance(traffic,amb);priority='clearing';priorityStart=time;const a=amb.route.approach,busy=DISTRICTS[1];
+ priorityRoute.position.set(busy.x+[1,0,-1,0][a]*2.7,.26,busy.z-[0,1,0,-1][a]*2.7);priorityRoute.rotation.y=a%2?Math.PI/2:0;
+ if(current==='s2'){$('trigger').disabled=true;status('Approaching siren located',APPROACH_NAMES[a]+' approach · all red until committed traffic has cleared.',true)}sirenPrevDistance=null;siren.start();
 }
 function sendSensorVehicle(type){spawn(type,'busy-0',-52,{forced:true});if(current==='s3')status('Vehicle joining sensor lane','The vehicle queues safely and is counted when it passes the sensor.')}
 $('trigger').addEventListener('click',()=>{
@@ -235,15 +246,16 @@ function setSound(on){siren.setEnabled(on);$('sound').setAttribute('aria-pressed
 let savedSound=null;try{savedSound=localStorage.getItem('transitsense-sound')}catch{}setSound(savedSound!=='off');$('sound').addEventListener('click',()=>setSound(!siren.enabled));
 addEventListener('keydown',e=>{if(e.target.matches('input,button')||document.querySelector('dialog[open]'))return;if(e.code==='Space'){e.preventDefault();togglePause()}if(e.key==='+')zoom(.85);if(e.key==='-')zoom(1.18);if(e.key==='0')resetView()});
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
-function signature(v){const values=v.type==='Two-wheeler'?[.25,.7]:v.type==='Truck'?[1,2]:[.65,1.2];const classified=classifySignature(...values);counts[classified]++;lastSignature={type:classified,at:time,peak:values[0],width:values[1]};if(current!=='s3')return;$('count-bike').textContent=counts['Two-wheeler'];$('count-car').textContent=counts.Car;$('count-truck').textContent=counts.Truck;$('wave-type').textContent=classified+' detected';const path=[];for(let i=0;i<=130;i++){const x=i*2,t=(i-65)/(values[1]*9);const y=26-Math.sin(t*2.2)*Math.exp(-t*t*.3)*values[0]*22;path.push((i?'L':'M')+x+' '+y.toFixed(2))}$('wave').setAttribute('d',path.join(' '));status(classified+' signature detected',Object.values(counts).reduce((a,b)=>a+b,0)+' vehicles counted · waveform classification illustrated.')}
+function signature(v){const values=v.type==='Two-wheeler'?[.25,.7]:v.type==='Truck'||v.type==='Bus'?[1,2]:[.65,1.2];const classified=classifySignature(...values);counts[classified]++;lastSignature={type:classified,at:time,peak:values[0],width:values[1]};if(current!=='s3')return;$('count-bike').textContent=counts['Two-wheeler'];$('count-car').textContent=counts.Car;$('count-truck').textContent=counts.Truck;$('wave-type').textContent=classified+' detected';const path=[];for(let i=0;i<=130;i++){const x=i*2,t=(i-65)/(values[1]*9);const y=26-Math.sin(t*2.2)*Math.exp(-t*t*.3)*values[0]*22;path.push((i?'L':'M')+x+' '+y.toFixed(2))}$('wave').setAttribute('d',path.join(' '));status(classified+' signature detected',Object.values(counts).reduce((a,b)=>a+b,0)+' vehicles counted · waveform classification illustrated.')}
 function tick(dt){
  time+=dt;
  const before=new Map(vehicles.map(v=>[v.id,v.p]));
- for(const v of stepTraffic(traffic,dt)){world.remove(v.mesh);if(v===focusCar)focusCar=null;if(v===ambulanceCar)ambulanceCar=null}
+ for(const v of stepTraffic(traffic,dt)){world.remove(v.mesh);if(v===focusCar)focusCar=null;if(v===ambulanceCar)ambulanceCar=null;if(ambulanceQueue.includes(v))ambulanceQueue.splice(ambulanceQueue.indexOf(v),1)}
+ if(!traffic.junctions[1].priority&&ambulanceQueue.length)startPriority(ambulanceQueue.shift());
  for(const v of vehicles){
   positionVehicle(v);
   if(v.route.junction==='busy'&&v.route.axis===0&&!v.counted&&before.get(v.id)<3&&v.p>=3){v.counted=true;signature(v)}
-  if(v.type==='Ambulance')v.mesh.userData.flash.visible=Math.floor(time*8)%2===0;
+  if(v.type==='Ambulance'||v.type==='Police')v.mesh.userData.flash.visible=Math.floor(time*(v.type==='Police'?10:8)+v.id)%2===0;
  }
  if(ambulanceCar&&current==='s2'&&siren.enabled){
   const busy=DISTRICTS[1],at=ambulanceCar.mesh.position,distance=Math.hypot(at.x-busy.x,at.z-busy.z),closing=sirenPrevDistance===null||dt<=0?0:(sirenPrevDistance-distance)/dt;
@@ -254,7 +266,7 @@ function tick(dt){
   if(nextPriority==='active')status('Green held for ambulance','Vehicles ahead clear first. Every conflicting approach stays red.');
   else if(priority==='active'&&!nextPriority)status('Ambulance clear','All-red clearance, then the normal coordinated cycle resumes.');
  }
- priority=nextPriority;if(current==='s2')$('trigger').disabled=!!j.priority;priorityRoute.visible=j.stage==='priority';
+ priority=nextPriority;if(current==='s2')$('trigger').disabled=!!j.priority&&ambulanceQueue.length>=3;priorityRoute.visible=j.stage==='priority';
  const warnings=residentialWarnings(traffic,fault),red=warnings.includes('red'),approach=warnings.indexOf('green'),direction=['North','West','South','East'][approach];
  sensorLabel.el.querySelector('span').textContent=fault?'FAIL-SAFE · ALL RED':red?direction.toUpperCase()+' GREEN · OTHER SIDES RED':'NO INCOMING VEHICLE · ALL GREEN';
  sensorLabel.el.classList.toggle('red',fault);sensorLabel.el.classList.toggle('green',!fault);sensorLabel.position.copy(beacons[approach<0?0:approach].position);sensorLabel.position.y=2.1;
@@ -281,6 +293,48 @@ function tick(dt){
  bayLabel.el.style.visibility=current==='s5'&&bayLabel.shown?'':'hidden';if(liveBayLabel)liveBayLabel.el.style.visibility=current==='s5'?'':'hidden';youLabel.el.style.visibility=current==='s5'&&parkPlay&&parkPlay.you&&parkPlay.you.parent?'':'hidden';
 }
 const projected=new THREE.Vector3();let previous=performance.now();function animate(){const now=performance.now();requestAnimationFrame(animate);const dt=Math.max(0,Math.min((now-previous)/1000,.05));previous=now;if(!paused)tick(dt*speed);controls.update();pulses.forEach((p,i)=>{const s=1+Math.sin(time*1.6-i)*.06;p.scale.set(s,s,s);p.material.opacity=.28+Math.sin(time*2-i)*.12});for(const l of worldLabels){projected.copy(l.position).project(camera);const x=(projected.x*.5+.5)*innerWidth,y=(-projected.y*.5+.5)*innerHeight;l.el.style.left=x+'px';l.el.style.top=y+'px';l.el.style.display=projected.z>1||x<0||x>innerWidth||y<(innerWidth<701?175:90)||y>innerHeight-115?'none':''}renderer.render(scene,camera)}
+// Night mode: darker sky, moonlight, brighter windows and lamps, and warm light pools at the junctions.
+function setNight(on){
+ night=on;const sky=on?'#07111b':'#152733';scene.background.set(sky);scene.fog.color.set(sky);
+ hemi.intensity=on?.45:2.7;sun.intensity=on?.45:3.4;sun.color.set(on?'#9db6ff':'#ffdfb0');fill.intensity=on?.2:1.1;renderer.toneMappingExposure=on?1.2:1.35;
+ for(const m of materialCache.values())if(m.emissive.getHex())m.emissiveIntensity=on?2.4:.7;
+ for(const l of nightLamps)world.remove(l);nightLamps=[];
+ if(on)for(const j of DISTRICTS)for(const [x,z] of lampSpots.filter(([x,z])=>Math.hypot(x-j.x,z-j.z)<40).slice(0,8)){const l=new THREE.PointLight('#ffc77a',60,22,1.6);l.position.set(x+.9,4.4,z);world.add(l);nightLamps.push(l)}
+ document.body.classList.toggle('night',on);$('night').setAttribute('aria-pressed',on);$('night').setAttribute('aria-label',on?'Switch to day':'Switch to night');
+}
+$('night').addEventListener('click',()=>setNight(!night));
+
+// Guided tour: walks through the four systems with captions, for a judge or a screen recording.
+const TOUR=[
+ {scene:'s1',title:'Blind-junction warning',text:'A LiDAR post spots a car approaching the blind corner. Its own post stays green while the other three turn red, so no one pulls out in front of it.',run:()=>sendS1(),seconds:13},
+ {scene:'s2',title:'Ambulance priority',text:'Two microphones hear the siren and work out its direction. The junction clears to all red, then holds the ambulance\'s approach green until it has passed.',run:()=>dispatchAmbulance(0),seconds:17},
+ {scene:'s3',title:'Magnetic vehicle counting',text:'A magnetometer under the road reads each vehicle\'s magnetic signature to count and classify it: car, truck or two-wheeler.',run:()=>{sendSensorVehicle('Car');tourTimers.push(setTimeout(()=>sendSensorVehicle('Truck'),2500),setTimeout(()=>sendSensorVehicle('Two-wheeler'),5000))},seconds:15},
+ {scene:'s5',title:'Predictive parking',text:'Cameras track every bay. TransitSense replays the cars expected to arrive and leave before you get there, then guides you to the bay that will still be free.',run:()=>$('trigger').click(),seconds:18},
+ {scene:null,title:'Live from real hardware',text:'Every system also runs on an ESP32 in Wokwi. Press a button in the simulation and it shows up here within a second. Open Dashboard to watch them live.',run:()=>{history.replaceState(null,'','#s1');choose('s1');resetView('overview')},seconds:10},
+];
+let tourStep=-1,tourTimers=[];
+function tourGo(i){
+ for(const t of tourTimers)clearTimeout(t);tourTimers=[];
+ if(i<0||i>=TOUR.length)return tourEnd();
+ tourStep=i;const step=TOUR[i];
+ if(paused)togglePause();
+ if(step.scene&&current!==step.scene){history.replaceState(null,'','#'+step.scene);choose(step.scene)}
+ $('tour-kicker').textContent='GUIDED TOUR · '+(i+1)+' OF '+TOUR.length;$('tour-title').textContent=step.title;$('tour-text').textContent=step.text;
+ $('tour-prev').disabled=i===0;$('tour-next').textContent=i===TOUR.length-1?'Finish':'Next';
+ const bar=$('tour-progress');bar.style.transition='none';bar.style.width='0';bar.offsetWidth;bar.style.transition='width '+step.seconds+'s linear';bar.style.width='100%';
+ tourTimers.push(setTimeout(step.run,900),setTimeout(()=>tourGo(i+1),step.seconds*1000));
+}
+function tourStart(){$('tour').hidden=false;document.body.classList.add('touring');if(dash&&!$('dashboard').hidden)dash.toggle(false);$('help-dialog').close();$('about-dialog').close();tourGo(0)}
+function tourEnd(){for(const t of tourTimers)clearTimeout(t);tourTimers=[];tourStep=-1;$('tour').hidden=true;document.body.classList.remove('touring')}
+for(const b of document.querySelectorAll('[data-tour]'))b.addEventListener('click',tourStart);
+$('tour-prev').addEventListener('click',()=>tourGo(tourStep-1));$('tour-next').addEventListener('click',()=>tourGo(tourStep+1));$('tour-exit').addEventListener('click',tourEnd);
+addEventListener('keydown',e=>{if(e.key==='Escape'&&tourStep>=0)tourEnd()});
+if(new URLSearchParams(location.search).has('tour'))setTimeout(tourStart,1500);
+
+// About page, and the phone-only button that folds the demo panel away to show more of the city.
+for(const b of document.querySelectorAll('[data-about]'))b.addEventListener('click',()=>{$('help-dialog').close();$('about-dialog').showModal()});
+$('panel-toggle').addEventListener('click',()=>{const folded=document.querySelector('.experiment').classList.toggle('folded');$('panel-toggle').setAttribute('aria-expanded',!folded);$('panel-toggle').setAttribute('aria-label',folded?'Show the full panel':'Fold the panel')});
+
 // Live events from the Wokwi simulations (wokwi/README.md): each one drives the matching demo.
 const LIVE={junction:{scene:'s1',name:'Junction warning'},priority:{scene:'s2',name:'Ambulance priority'},counter:{scene:'s3',name:'Vehicle counter'},parking:{scene:'s5',name:'Smart parking'}};
 const LIVE_VEHICLES={bike:'Two-wheeler',car:'Car',heavy:'Truck'};
@@ -307,7 +361,7 @@ function onLive(e){
   else{if(liveFault){fault=liveFault=false}liveNote('junction',e.state==='pending'?'Movement seen · direction not confirmed':'Junction clear')}
  }
  if(e.sim==='priority'){
-  if(e.state==='active'){liveFocus('priority');liveNote('priority',dispatchAmbulance()?'Emergency vehicle detected · ambulance dispatched':'Emergency vehicle detected · priority already active')}
+  if(e.state==='active'){liveFocus('priority');liveNote('priority','Emergency vehicle detected · '+{started:'ambulance dispatched',queued:'ambulance queued behind the current one',full:'ambulance queue is full'}[dispatchAmbulance()])}
   else liveNote('priority','Priority ended')
  }
  if(e.sim==='counter'&&e.state==='detected'&&performance.now()-liveCounterAt>400){liveCounterAt=performance.now();const type=LIVE_VEHICLES[e.vehicle];liveFocus('counter');sendSensorVehicle(type);liveNote('counter',type+' detected'+(e.total!==null?' · '+e.total+' counted in Wokwi':''))}
