@@ -80,7 +80,8 @@ export function stepTraffic(traffic,dt){
         if(leader)limit=leader.p-(leader.length+v.length)/2-FOLLOWING_GAP;
         const stop=-j.stopLine-v.length/2;
         if(v.p<=stop+.00001){
-          const exitBlocked=leader&&leader.p-leader.length/2<j.stopLine+v.length+FOLLOWING_GAP;
+          // Keep the box clear only when the car ahead is actually stuck past the junction, not just driving away.
+          const exitBlocked=leader&&leader.p-leader.length/2<j.stopLine+v.length+FOLLOWING_GAP&&leader.p-leader.length/2>-j.stopLine&&leader.velocity<1;
           if((j.signalized?trafficLight(j,route.approach)!=='green':j.reservation!==v.id)||exitBlocked)limit=Math.min(limit,stop);
         }
         const distance=Math.max(0,limit-v.p),targetSpeed=Math.min(v.speed,Math.sqrt(8*distance));

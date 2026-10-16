@@ -9,7 +9,7 @@ about a second:
 | [`junction_warning/`](junction_warning/) | [477878444686833665](https://wokwi.com/projects/477878444686833665) | Approach confirmed (A then B) → a car drives up to the blind corner and the cross posts turn red. Sensor fault → all posts red. |
 | [`emergency_priority/`](emergency_priority/) | [477879314711626753](https://wokwi.com/projects/477879314711626753) | Emergency button → an ambulance is dispatched and the junction clears for it. |
 | [`vehicle_counter/`](vehicle_counter/) | [477879876404632577](https://wokwi.com/projects/477879876404632577) | Two-wheeler / car / heavy button → that vehicle drives over the magnetometer and is counted. |
-| [`smart_parking/`](smart_parking/) | [477880391347889153](https://wokwi.com/projects/477880391347889153) | Bay status and the arrival-time knob → the arrival time on the site follows the knob and the bay status shows in the feed. |
+| [`smart_parking/`](smart_parking/) | [477880391347889153](https://wokwi.com/projects/477880391347889153) | The bay sensor drives bay B-10 in the garage (a car drives in or out), and the arrival-time knob sets the arrival time; the site's bay prediction updates from both. |
 
 Every event also appears in the live feed on the site. **Follow** (top right) makes the site jump
 to the matching demo when an event arrives; turn it off to stay where you are.

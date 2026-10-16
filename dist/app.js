@@ -154,7 +154,7 @@ function stepMovers(dt){for(const m of [...parkMovers]){if(m.wait>0){m.wait-=dt;
 function departCar(s){s.mesh.visible=false;const m=parkingCar(s.color);drive(m,exitPath(s),()=>world.remove(m))}
 function arriveCar(s){s.arrivalMesh=parkingCar(ARRIVAL_COLORS[s.index%4]);drive(s.arrivalMesh,bayPath(s))}
 function turnAway(m,onTurn=null){drive(m,[{x:42,z:70},{x:23,z:70}],()=>{if(onTurn)onTurn();drive(m,[{x:23,z:68.5},{x:44,z:68.5}],()=>world.remove(m),1.2)})}
-function resetParking(){for(const m of parkMovers)world.remove(m.mesh);parkMovers=[];for(const s of slots){if(s.mesh)s.mesh.visible=true;if(s.arrivalMesh){world.remove(s.arrivalMesh);s.arrivalMesh=null}}if(parkPlay&&parkPlay.you)world.remove(parkPlay.you);parkPlay=null}
+function resetParking(){for(const m of parkMovers)world.remove(m.mesh);parkMovers=[];for(const s of slots){if(s.mesh)s.mesh.visible=s.occupied;if(s.arrivalMesh){world.remove(s.arrivalMesh);s.arrivalMesh=null}}if(parkPlay&&parkPlay.you)world.remove(parkPlay.you);parkPlay=null}
 function showBayPlan(plan){const taken=new Set(plan.events.filter(e=>e.type==='arrive'&&e.bay!==null&&!slots[e.bay].occupied).map(e=>e.bay));for(const s of slots){const role=s.index===plan.bay?'target':s.index===plan.backup?'backup':taken.has(s.index)?'taken':null;s.overlay.visible=!!role;if(role)s.overlay.material=bayMaterials[role]}if(plan.bay!==null){const s=slots[plan.bay];bayLabel.position.set(s.x,3.4,s.z);bayLabel.el.querySelector('span').textContent='YOUR BAY · '+bayName(plan.bay)}bayLabel.shown=plan.bay!==null}
 
 function resetView(mode=viewMode){
@@ -276,13 +276,23 @@ function tick(dt){
    else turnAway(p.you,()=>{if(current==='s5'&&parkPlay===p){const next=nextOpening(slots.map(s=>s.occupied),eta,parkingOptions());status('Garage full · turned away','As predicted, every bay is taken. '+(next?'Arriving in '+next+' min would find a bay.':'Try the nearby lot.'),true)}})}
   if(p.you)youLabel.position.set(p.you.position.x,3.1,p.you.position.z);
  }
- bayLabel.el.style.visibility=current==='s5'&&bayLabel.shown?'':'hidden';youLabel.el.style.visibility=current==='s5'&&parkPlay&&parkPlay.you&&parkPlay.you.parent?'':'hidden';
+ bayLabel.el.style.visibility=current==='s5'&&bayLabel.shown?'':'hidden';if(liveBayLabel)liveBayLabel.el.style.visibility=current==='s5'?'':'hidden';youLabel.el.style.visibility=current==='s5'&&parkPlay&&parkPlay.you&&parkPlay.you.parent?'':'hidden';
 }
 const projected=new THREE.Vector3();let previous=performance.now();function animate(){const now=performance.now();requestAnimationFrame(animate);const dt=Math.max(0,Math.min((now-previous)/1000,.05));previous=now;if(!paused)tick(dt*speed);controls.update();pulses.forEach((p,i)=>{const s=1+Math.sin(time*1.6-i)*.06;p.scale.set(s,s,s);p.material.opacity=.28+Math.sin(time*2-i)*.12});for(const l of worldLabels){projected.copy(l.position).project(camera);const x=(projected.x*.5+.5)*innerWidth,y=(-projected.y*.5+.5)*innerHeight;l.el.style.left=x+'px';l.el.style.top=y+'px';l.el.style.display=projected.z>1||x<0||x>innerWidth||y<(innerWidth<701?175:90)||y>innerHeight-115?'none':''}renderer.render(scene,camera)}
 // Live events from the Wokwi simulations (wokwi/README.md): each one drives the matching demo.
 const LIVE={junction:{scene:'s1',name:'Junction warning'},priority:{scene:'s2',name:'Ambulance priority'},counter:{scene:'s3',name:'Vehicle counter'},parking:{scene:'s5',name:'Smart parking'}};
 const LIVE_VEHICLES={bike:'Two-wheeler',car:'Car',heavy:'Truck'};
-let followLive=true,liveFault=false,liveCounterAt=0;
+let followLive=true,liveFault=false,liveCounterAt=0,liveBayLabel=null;
+// The Wokwi bay sensor stands in for the garage bay nearest the entry: the forecast then uses its real state.
+function liveBay(){return slots.reduce((best,s)=>parkingCost[s.index]<parkingCost[best.index]?s:best)}
+function setLiveBay(occupied){
+ const s=liveBay();
+ if(!liveBayLabel||!worldLabels.includes(liveBayLabel))liveBayLabel=label('WOKWI BAY · '+bayName(s.index),s.x,2.6,s.z);
+ if(s.occupied===occupied)return;
+ resetParking();s.occupied=occupied;departOrder=departOrder.filter(i=>i!==s.index);
+ if(occupied){if(!s.mesh){s.mesh=parkingCar(s.color);s.mesh.position.set(s.x,.9,s.z)}s.mesh.visible=false;const m=parkingCar(ARRIVAL_COLORS[0]);drive(m,bayPath(s),()=>{world.remove(m);s.mesh.visible=s.occupied})}
+ else departCar(s);
+}
 function liveNote(sim,text){const li=document.createElement('li');const b=document.createElement('b');b.textContent='Wokwi · '+LIVE[sim].name;li.append(b,document.createTextNode(text));$('live-feed').prepend(li);while($('live-feed').children.length>3)$('live-feed').lastChild.remove();setTimeout(()=>li.classList.add('gone'),12000);setTimeout(()=>li.remove(),12600)}
 function liveFocus(sim){const scene=LIVE[sim].scene;if(followLive&&current!==scene){history.replaceState(null,'','#'+scene);choose(scene)}if(paused)togglePause()}
 function onLive(e){
@@ -298,8 +308,10 @@ function onLive(e){
  }
  if(e.sim==='counter'&&e.state==='detected'&&performance.now()-liveCounterAt>400){liveCounterAt=performance.now();const type=LIVE_VEHICLES[e.vehicle];liveFocus('counter');sendSensorVehicle(type);liveNote('counter',type+' detected'+(e.total!==null?' · '+e.total+' counted in Wokwi':''))}
  if(e.sim==='parking'){liveFocus('parking');
-  if(e.eta!==null){eta=Math.max(1,Math.min(30,e.eta));if(current==='s5'){$('eta').value=eta;if(parkPlay)resetParking();updateForecast()}}
-  liveNote('parking',{available:'Bay free now',predicted:'Bay occupied · predicted free on arrival',occupied:'Bay likely occupied on arrival',error:'Sensor error · bay status unknown'}[e.state]+(e.eta!==null?' · arrival in '+e.eta+' min':''))
+  if(e.eta!==null){eta=Math.max(1,Math.min(30,e.eta));if(current==='s5'){$('eta').value=eta;if(parkPlay)resetParking()}}
+  if(e.state!=='error')setLiveBay(e.state!=='available');
+  if(current==='s5')updateForecast();
+  liveNote('parking',bayName(liveBay().index)+' · '+{available:'free now',predicted:'occupied · Wokwi expects it free on arrival',occupied:'occupied · likely still taken on arrival',error:'sensor error · status unknown'}[e.state]+(e.eta!==null?' · arrival in '+e.eta+' min':''))
  }
 }
 {const params=new URLSearchParams(location.search),label={connecting:'Wokwi connecting…',live:'Wokwi live',offline:'Wokwi offline'};
