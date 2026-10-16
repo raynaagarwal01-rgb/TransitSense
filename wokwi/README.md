@@ -28,6 +28,22 @@ projects, so the website works with either. It uses one shared buzzer (the emerg
 | 4 · Smart parking | Bay sensor, arrival-time knob, red / green LEDs | TRIG 2 · ECHO VP (36) · knob VN (39) · LEDs 12, 15 |
 | Shared | Buzzer | 13 |
 
+## Live dashboard and commands
+
+**Dashboard** (top right of the site) shows each system as online or offline, its latest event and
+counts, the parking rates learned from Wokwi, a chart of vehicles counted per minute, and a CSV
+download of every event (kept in your browser).
+
+- **Learned parking rates:** each car the Wokwi bay sensor sees arrive or leave counts as one garage
+  arrival or departure. The site turns the last hour of these into per-minute rates, blended with
+  the default rates (0.9 in, 0.45 out) so a few events don't swing the forecast. The parking panel says
+  which rates it is using; **Rush hour** still overrides them.
+- **Website → Wokwi:** the dashboard buttons publish `{"cmd":"identify"}` or `{"cmd":"priority"}` to
+  `transitsense/live/cmd/<system>`. The combined sketch flashes that system's lights with a chirp, or
+  starts emergency priority as if the button were pressed, and replies with `{"state":"ack"}`.
+  Commands need the combined project ([`transitsense_all/`](transitsense_all/)).
+- Every sketch sends a heartbeat every 10 s so the dashboard knows it is online.
+
 ## How it works
 
 ```

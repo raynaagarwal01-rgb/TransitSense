@@ -6,6 +6,8 @@
 export const DEFAULT_BROKER = 'wss://broker.hivemq.com:8884/mqtt';
 export const DEFAULT_TOPIC = 'transitsense/live';
 export const SIMS = ['junction', 'priority', 'counter', 'parking'];
+// Commands the website can send to the simulations (on prefix/cmd/<sim>; see wokwi/README.md).
+export const COMMANDS = ['identify', 'priority'];
 
 const encoder = new TextEncoder(), decoder = new TextDecoder();
 const str = s => {const b = encoder.encode(s); return [b.length >> 8, b.length & 255, ...b]};
@@ -57,13 +59,18 @@ export function parseEvent(prefix, topic, payload) {
   if (!data || typeof data !== 'object' || typeof data.state !== 'string') return null;
   const number = (v, max) => Number.isFinite(v) ? Math.max(0, Math.min(max, Math.round(v))) : null;
   const allowed = {
-    junction: ['online', 'clear', 'pending', 'warning', 'fault'],
-    priority: ['online', 'active', 'ended'],
-    counter: ['online', 'detected'],
-    parking: ['online', 'available', 'predicted', 'occupied', 'error'],
+    junction: ['online', 'ack', 'clear', 'pending', 'warning', 'fault'],
+    priority: ['online', 'ack', 'active', 'ended'],
+    counter: ['online', 'ack', 'detected'],
+    parking: ['online', 'ack', 'available', 'predicted', 'occupied', 'error'],
   }[sim];
   if (!allowed.includes(data.state)) return null;
   const event = {sim, state: data.state};
+  if (data.state === 'ack') {
+    if (!COMMANDS.includes(data.cmd)) return null;
+    event.cmd = data.cmd;
+  }
+  if (sim === 'junction') Object.assign(event, {a: number(data.a, 1000), b: number(data.b, 1000)});
   if (sim === 'counter' && data.state === 'detected') {
     if (!['bike', 'car', 'heavy'].includes(data.vehicle)) return null;
     Object.assign(event, {vehicle: data.vehicle, bikes: number(data.bikes, 1e6), cars: number(data.cars, 1e6), heavy: number(data.heavy, 1e6), total: number(data.total, 1e6)});
@@ -112,9 +119,15 @@ export function connectLive({broker = DEFAULT_BROKER, prefix = DEFAULT_TOPIC, on
     setTimeout(open, retry);
     retry = Math.min(retry * 2, 30000);
   };
+  const send = (topic, payload) => {
+    if (socket?.readyState !== 1) return false;
+    socket.send(publishPacket(topic, payload));
+    return true;
+  };
   open();
   return {
-    publish: (sim, data) => socket?.readyState === 1 && socket.send(publishPacket(prefix + '/' + sim, JSON.stringify(data))),
+    publish: (sim, data) => send(prefix + '/' + sim, JSON.stringify(data)),
+    command: (sim, cmd) => send(prefix + '/cmd/' + sim, JSON.stringify({cmd})),
     close: () => {stopped = true; socket?.close()},
   };
 }

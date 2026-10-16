@@ -27,6 +27,32 @@ void sendEvent(const char* sim, const String& json) {
   Serial.println(json);
 }
 
+// Commands from the website arrive on transitsense/live/cmd/<system>:
+// {"cmd":"identify"} flashes that system's lights; {"cmd":"priority"} starts emergency priority.
+const char* SYSTEMS[] = {"junction", "priority", "counter", "parking"};
+unsigned long identifyUntil[4] = {0, 0, 0, 0};
+bool remotePriority = false;
+
+void onCommand(char* topic, byte* payload, unsigned int length) {
+  String t(topic), body;
+  for (unsigned int i = 0; i < length; i++) body += (char)payload[i];
+  for (int i = 0; i < 4; i++) {
+    if (!t.endsWith(String("/") + SYSTEMS[i])) continue;
+    if (body.indexOf("\"identify\"") >= 0) {
+      identifyUntil[i] = millis() + 3000;
+      Serial.println(String("Website -> ") + SYSTEMS[i] + ": flash lights");
+      sendEvent(SYSTEMS[i], "{\"state\":\"ack\",\"cmd\":\"identify\"}");
+    }
+    if (i == 1 && body.indexOf("\"priority\"") >= 0) {
+      remotePriority = true;
+      Serial.println("Website -> priority: emergency vehicle requested");
+      sendEvent("priority", "{\"state\":\"ack\",\"cmd\":\"priority\"}");
+    }
+  }
+}
+
+bool identifying(int system) { return millis() < identifyUntil[system]; }
+
 // Call every loop. Never blocks for long, so the sensors keep working offline.
 void keepOnline() {
   static unsigned long lastTry = 0;
@@ -36,12 +62,18 @@ void keepOnline() {
     String id = "transitsense-all-" + String(esp_random(), HEX);
     if (mqtt.connect(id.c_str())) {
       Serial.println("Connected to the TransitSense website feed");
-      for (const char* sim : {"junction", "priority", "counter", "parking"}) {
-        sendEvent(sim, "{\"state\":\"online\"}");
-      }
+      mqtt.subscribe("transitsense/live/cmd/#");
+      for (const char* sim : SYSTEMS) sendEvent(sim, "{\"state\":\"online\"}");
     }
   }
   mqtt.loop();
+
+  // Heartbeat, so the website's dashboard can show each system as online.
+  static unsigned long lastBeat = 0;
+  if (mqtt.connected() && millis() - lastBeat > 10000) {
+    lastBeat = millis();
+    for (const char* sim : SYSTEMS) mqtt.publish((String(TOPIC_PREFIX) + sim).c_str(), "{\"state\":\"online\"}");
+  }
 }
 
 // ---- Shared parts ----
@@ -145,7 +177,8 @@ unsigned long pStart = 0;
 
 void priorityStep() {
   unsigned long now = millis();
-  bool detected = digitalRead(P_BUTTON) == LOW;  // Pressed reads LOW with INPUT_PULLUP
+  bool detected = digitalRead(P_BUTTON) == LOW || remotePriority;  // Pressed reads LOW with INPUT_PULLUP
+  remotePriority = false;
 
   if (detected) {
     if (!pActive) {
@@ -261,6 +294,17 @@ void setup() {
 
   WiFi.begin(WIFI_SSID, "", 6);  // Channel 6 makes Wokwi-GUEST connect faster
   mqtt.setServer(MQTT_HOST, MQTT_PORT);
+  mqtt.setCallback(onCommand);
+}
+
+// Flashes a system's lights while the website's "Flash lights" command is active.
+void showIdentify() {
+  bool on = (millis() / 250) % 2;
+  const int lights[4][3] = {{J_RED, J_YELLOW, J_GREEN}, {P_RED, P_YELLOW, P_GREEN}, {21, 22, 23}, {S_RED, S_GREEN, -1}};
+  for (int i = 0; i < 4; i++) {
+    if (!identifying(i)) continue;
+    for (int pin : lights[i]) if (pin >= 0) digitalWrite(pin, on);
+  }
 }
 
 void loop() {
@@ -269,10 +313,13 @@ void loop() {
   priorityStep();
   counterStep();
   parkingStep();
+  showIdentify();
 
-  // One buzzer: the emergency tone wins over the junction warning tone.
+  // One buzzer: the emergency tone wins, then the junction warning, then a short chirp on "flash lights".
+  bool chirp = false;
+  for (int i = 0; i < 4; i++) chirp |= identifying(i) && identifyUntil[i] - millis() > 2700;
   static int tonePlaying = 0;
-  int wanted = pActive ? 1800 : jBuzzer ? 2000 : 0;
+  int wanted = pActive ? 1800 : jBuzzer ? 2000 : chirp ? 2600 : 0;
   if (wanted != tonePlaying) {
     if (wanted) tone(BUZZER, wanted);
     else noTone(BUZZER);

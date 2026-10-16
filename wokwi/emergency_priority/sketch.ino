@@ -33,6 +33,13 @@ void keepOnline() {
     }
   }
   mqtt.loop();
+
+  // Heartbeat, so the website's dashboard can show this simulation as online.
+  static unsigned long lastBeat = 0;
+  if (mqtt.connected() && millis() - lastBeat > 10000) {
+    lastBeat = millis();
+    mqtt.publish(TOPIC, "{\"state\":\"online\"}");
+  }
 }
 
 void sendEvent(const String& json) {

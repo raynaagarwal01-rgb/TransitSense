@@ -35,3 +35,16 @@ assert.deepEqual(parseEvent('transitsense/live','transitsense/live/counter','{"s
 assert.deepEqual(parseEvent('transitsense/live','transitsense/live/parking','{"state":"predicted","distance":30,"eta":99}'),{sim:'parking',state:'predicted',eta:60,distance:30});
 for(const [topic,payload] of [['transitsense/live/counter','{"state":"detected","vehicle":"tank"}'],['transitsense/live/junction','{"state":"<b>"}'],['transitsense/live/other','{"state":"online"}'],['elsewhere/counter','{"state":"online"}'],['transitsense/live/priority','not json']])assert.equal(parseEvent('transitsense/live',topic,payload),null);
 console.log('Passed: Wokwi live feed packets and event validation.');
+
+const {learnRates,perMinute,toCSV}=await import('./dist/dashboard.mjs');
+const T=Date.UTC(2026,0,1,9),min=60000,prior={arrive:.9,depart:.45};
+assert.equal(learnRates([{sim:'parking',state:'available',t:T}],prior,T+min),null);
+const parkLog=[['available',0],['occupied',1],['available',2],['predicted',3],['error',4],['occupied',5]].map(([state,m])=>({sim:'parking',state,t:T+m*min}));
+const learned=learnRates(parkLog,prior,T+5*min);
+assert.deepEqual([learned.arrivals,learned.departures,learned.minutes],[2,1,5]);
+assert.ok(Math.abs(learned.arrive-(2+.9*5)/10)<1e-9&&Math.abs(learned.depart-(1+.45*5)/10)<1e-9);
+const counted=perMinute([{sim:'counter',state:'detected',vehicle:'car',t:T},{sim:'counter',state:'detected',vehicle:'bike',t:T+29.5*min},{sim:'junction',state:'warning',t:T+29.5*min}],T+29.9*min);
+assert.deepEqual([counted.length,counted[0],counted[29]],[30,{bike:0,car:1,heavy:0},{bike:1,car:0,heavy:0}]);
+const csv=toCSV([{sim:'counter',state:'detected',vehicle:'car',bikes:0,cars:1,heavy:0,total:1,t:T}]).trim().split('\n');
+assert.equal(csv.length,2);assert.equal(csv[1],'2026-01-01T09:00:00.000Z,Vehicle counter,detected,Car detected,car,0,1,0,1,,,,');
+console.log('Passed: learned parking rates, per-minute history and CSV export.');
