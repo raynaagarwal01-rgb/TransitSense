@@ -3,6 +3,7 @@ import {OrbitControls} from './vendor/OrbitControls.js';
 import {classifySignature,planArrival,nextOpening,DEMAND} from './model.mjs';
 import {createSiren} from './siren.mjs';
 import {SENSORS,openHardware,initHardware} from './hardware.mjs';
+import {connectLive,DEFAULT_BROKER,DEFAULT_TOPIC} from './live.mjs';
 import {DISTRICTS,createTraffic,spawnVehicle,stepTraffic,requestAmbulance,trafficLight,vehiclePosition,vehicleOnRoad,residentialWarnings} from './traffic.mjs';
 const $=id=>document.getElementById(id);
 const config={
@@ -196,15 +197,17 @@ function renderPanel(){const c=config[current];$('district').textContent=c.distr
  if(current==='s5'){$('extra').innerHTML='<label class="arrival" for="eta"><span>Your arrival time</span><strong><span id="eta-label">'+eta+'</span> min from now</strong></label><input id="eta" type="range" min="1" max="30" value="'+eta+'"><div class="parking-stats"><div><span>FREE RIGHT NOW</span><strong id="free-now"></strong></div><div class="predicted"><span>FREE ON ARRIVAL</span><strong id="free-arrival"></strong></div></div><div class="bay-card" id="bay-card"><span class="bay-kicker">PREDICTED BAY FOR YOU</span><div class="bay-main"><strong id="bay-id"></strong><em id="bay-where"></em></div><p id="bay-why"></p></div>';$('eta').addEventListener('input',e=>{eta=Number(e.target.value);if(parkPlay)resetParking();updateForecast()});secondary('Show roof',()=>{roofVisible=!roofVisible;roof.visible=roofVisible;document.querySelector('#secondary button').textContent=roofVisible?'Cutaway view':'Show roof';worldLabels.forEach(l=>{if(l.el.textContent.includes('CAM'))l.el.style.visibility=roofVisible?'hidden':''})});const rush=secondary('Rush hour',()=>{demand=demand==='rush'?'normal':'rush';markRush();if(parkPlay)resetParking();updateForecast()}),markRush=()=>{rush.setAttribute('aria-pressed',demand==='rush');rush.style.borderColor=demand==='rush'?'var(--amber)':''};markRush();secondary('Reset',()=>{resetParking();$('trigger-label').textContent=c.action;updateForecast()});updateForecast()}
 }
 function clearFocus(){if(focusCar){world.remove(focusCar.mesh);vehicles.splice(vehicles.indexOf(focusCar),1);focusCar=null}}
-function sendS1(approach=true){clearFocus();focusCar=spawn('Car',approach?'residential-0':'residential-2',approach?-56:24,{forced:true,departing:!approach});focusCar.outgoing=!approach;status(approach?'Vehicle approaching':'Departing vehicle ignored',approach?'Its post stays green; the other three turn red. Vehicles yield before crossing.':'Distance is increasing. The vehicle stays in its correct lane.')}
+function sendS1(approach=true){clearFocus();focusCar=spawn('Car',approach?'residential-0':'residential-2',approach?-56:24,{forced:true,departing:!approach});focusCar.outgoing=!approach;if(current==='s1')status(approach?'Vehicle approaching':'Departing vehicle ignored',approach?'Its post stays green; the other three turn red. Vehicles yield before crossing.':'Distance is increasing. The vehicle stays in its correct lane.')}
+function dispatchAmbulance(){
+ if(traffic.junctions[1].priority)return false;
+ ambulanceCar=spawn('Ambulance','busy-0',-60,{forced:true});requestAmbulance(traffic,ambulanceCar);priority='clearing';priorityStart=time;if(current==='s2'){$('trigger').disabled=true;status('Approaching siren located','North approach · all red until committed traffic has cleared.',true)}sirenPrevDistance=null;siren.start();return true;
+}
+function sendSensorVehicle(type){spawn(type,'busy-0',-52,{forced:true});if(current==='s3')status('Vehicle joining sensor lane','The vehicle queues safely and is counted when it passes the sensor.')}
 $('trigger').addEventListener('click',()=>{
  if(paused)togglePause();
  if(current==='s1')sendS1();
- if(current==='s2'){
-  if(traffic.junctions[1].priority)return;
-  ambulanceCar=spawn('Ambulance','busy-0',-60,{forced:true});requestAmbulance(traffic,ambulanceCar);priority='clearing';priorityStart=time;$('trigger').disabled=true;status('Approaching siren located','North approach · all red until committed traffic has cleared.',true);sirenPrevDistance=null;siren.start();
- }
- if(current==='s3'){spawn(vehicleType,'busy-0',-52,{forced:true});status('Vehicle joining sensor lane','The vehicle queues safely and is counted when it passes the sensor.')}
+ if(current==='s2')dispatchAmbulance();
+ if(current==='s3')sendSensorVehicle(vehicleType);
  if(current==='s5'){resetParking();const plan=parkingPlan();parkPlay={plan,start:time,next:0,you:null};showBayPlan(plan);status('Replaying the next '+eta+' min','Cars leave and earlier drivers park first. Then your car follows the prediction.');$('trigger-label').textContent='Replay my arrival'}
 });
 for(const b of document.querySelectorAll('[data-view]'))b.addEventListener('click',()=>{
@@ -276,4 +279,31 @@ function tick(dt){
  bayLabel.el.style.visibility=current==='s5'&&bayLabel.shown?'':'hidden';youLabel.el.style.visibility=current==='s5'&&parkPlay&&parkPlay.you&&parkPlay.you.parent?'':'hidden';
 }
 const projected=new THREE.Vector3();let previous=performance.now();function animate(){const now=performance.now();requestAnimationFrame(animate);const dt=Math.max(0,Math.min((now-previous)/1000,.05));previous=now;if(!paused)tick(dt*speed);controls.update();pulses.forEach((p,i)=>{const s=1+Math.sin(time*1.6-i)*.06;p.scale.set(s,s,s);p.material.opacity=.28+Math.sin(time*2-i)*.12});for(const l of worldLabels){projected.copy(l.position).project(camera);const x=(projected.x*.5+.5)*innerWidth,y=(-projected.y*.5+.5)*innerHeight;l.el.style.left=x+'px';l.el.style.top=y+'px';l.el.style.display=projected.z>1||x<0||x>innerWidth||y<(innerWidth<701?175:90)||y>innerHeight-115?'none':''}renderer.render(scene,camera)}
+// Live events from the Wokwi simulations (wokwi/README.md): each one drives the matching demo.
+const LIVE={junction:{scene:'s1',name:'Junction warning'},priority:{scene:'s2',name:'Ambulance priority'},counter:{scene:'s3',name:'Vehicle counter'},parking:{scene:'s5',name:'Smart parking'}};
+const LIVE_VEHICLES={bike:'Two-wheeler',car:'Car',heavy:'Truck'};
+let followLive=true,liveFault=false,liveCounterAt=0;
+function liveNote(sim,text){const li=document.createElement('li');const b=document.createElement('b');b.textContent='Wokwi · '+LIVE[sim].name;li.append(b,document.createTextNode(text));$('live-feed').prepend(li);while($('live-feed').children.length>3)$('live-feed').lastChild.remove();setTimeout(()=>li.classList.add('gone'),12000);setTimeout(()=>li.remove(),12600)}
+function liveFocus(sim){const scene=LIVE[sim].scene;if(followLive&&current!==scene){history.replaceState(null,'','#'+scene);choose(scene)}if(paused)togglePause()}
+function onLive(e){
+  if(e.state==='online')return liveNote(e.sim,'Simulation connected');
+ if(e.sim==='junction'){
+  if(e.state==='warning'){liveFocus('junction');if(liveFault){fault=liveFault=false}sendS1();liveNote('junction','Car approaching the blind corner')}
+  else if(e.state==='fault'){liveFocus('junction');fault=liveFault=true;liveNote('junction','Sensor fault · all posts red')}
+  else{if(liveFault){fault=liveFault=false}liveNote('junction',e.state==='pending'?'Movement seen · direction not confirmed':'Junction clear')}
+ }
+ if(e.sim==='priority'){
+  if(e.state==='active'){liveFocus('priority');liveNote('priority',dispatchAmbulance()?'Emergency vehicle detected · ambulance dispatched':'Emergency vehicle detected · priority already active')}
+  else liveNote('priority','Priority ended')
+ }
+ if(e.sim==='counter'&&e.state==='detected'&&performance.now()-liveCounterAt>400){liveCounterAt=performance.now();const type=LIVE_VEHICLES[e.vehicle];liveFocus('counter');sendSensorVehicle(type);liveNote('counter',type+' detected'+(e.total!==null?' · '+e.total+' counted in Wokwi':''))}
+ if(e.sim==='parking'){liveFocus('parking');
+  if(e.eta!==null){eta=Math.max(1,Math.min(30,e.eta));if(current==='s5'){$('eta').value=eta;if(parkPlay)resetParking();updateForecast()}}
+  liveNote('parking',{available:'Bay free now',predicted:'Bay occupied · predicted free on arrival',occupied:'Bay likely occupied on arrival',error:'Sensor error · bay status unknown'}[e.state]+(e.eta!==null?' · arrival in '+e.eta+' min':''))
+ }
+}
+{const params=new URLSearchParams(location.search),label={connecting:'Wokwi connecting…',live:'Wokwi live',offline:'Wokwi offline'};
+ $('wokwi-follow').addEventListener('click',()=>{followLive=!followLive;$('wokwi-follow').setAttribute('aria-pressed',followLive)});
+ if(params.get('wokwi')==='off')$('wokwi').hidden=true;
+ else connectLive({broker:params.get('broker')||DEFAULT_BROKER,prefix:params.get('topic')||DEFAULT_TOPIC,onEvent:onLive,onStatus:s=>{$('wokwi-label').textContent=label[s];$('wokwi').dataset.state=s}});}
 buildScene();choose(location.hash.slice(1)||'s1');if(!location.hash)resetView('overview');if(paused){paused=false;togglePause()}$('loading').classList.add('loaded');requestAnimationFrame(animate);

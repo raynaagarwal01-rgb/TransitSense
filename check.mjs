@@ -24,3 +24,14 @@ assert.notEqual(planArrival(occupancy,3,rush).bay,null);
 const full=planArrival(occupancy,20,rush);assert.equal(full.bay,null);assert.ok(full.turnedAway>0);
 const opening=nextOpening(occupancy,20,rush);assert.ok(opening===null||(opening>20&&planArrival(occupancy,opening,rush).bay!==null));
 console.log('Passed: bay-level parking prediction, nearest free bay, and full-garage handling.');
+
+const {connectPacket,subscribePacket,publishPacket,readPackets,readPublish,parseEvent}=await import('./dist/live.mjs');
+const big='x'.repeat(200),stream=new Uint8Array([...connectPacket('id'),...publishPacket('transitsense/live/counter',big),...subscribePacket('a/#')]);
+const {packets,rest}=readPackets(stream);
+assert.deepEqual(packets.map(p=>p.type),[1,3,8]);assert.equal(rest.length,0);
+assert.deepEqual(readPublish(packets[1]),{topic:'transitsense/live/counter',payload:big,retained:false});
+assert.equal(readPackets(stream.subarray(0,stream.length-1)).packets.length,2);
+assert.deepEqual(parseEvent('transitsense/live','transitsense/live/counter','{"state":"detected","vehicle":"car","bikes":0,"cars":3,"heavy":1,"total":4}'),{sim:'counter',state:'detected',vehicle:'car',bikes:0,cars:3,heavy:1,total:4});
+assert.deepEqual(parseEvent('transitsense/live','transitsense/live/parking','{"state":"predicted","distance":30,"eta":99}'),{sim:'parking',state:'predicted',eta:60,distance:30});
+for(const [topic,payload] of [['transitsense/live/counter','{"state":"detected","vehicle":"tank"}'],['transitsense/live/junction','{"state":"<b>"}'],['transitsense/live/other','{"state":"online"}'],['elsewhere/counter','{"state":"online"}'],['transitsense/live/priority','not json']])assert.equal(parseEvent('transitsense/live',topic,payload),null);
+console.log('Passed: Wokwi live feed packets and event validation.');

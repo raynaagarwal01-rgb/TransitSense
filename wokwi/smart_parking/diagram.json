@@ -1,0 +1,131 @@
+{
+  "version": 1,
+  "author": "TransitSense",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 20,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-hc-sr04",
+      "id": "parkingSensor",
+      "top": -80,
+      "left": 300,
+      "attrs": {
+        "distance": "100"
+      }
+    },
+    {
+      "type": "wokwi-potentiometer",
+      "id": "eta",
+      "top": 100,
+      "left": 300,
+      "attrs": {
+        "value": "0"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "red",
+      "top": -60,
+      "left": 520,
+      "attrs": {
+        "color": "red"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "green",
+      "top": 40,
+      "left": 520,
+      "attrs": {
+        "color": "green"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "esp:TX",
+      "$serialMonitor:RX",
+      "",
+      []
+    ],
+    [
+      "esp:RX",
+      "$serialMonitor:TX",
+      "",
+      []
+    ],
+    [
+      "parkingSensor:VCC",
+      "esp:5V",
+      "red",
+      []
+    ],
+    [
+      "parkingSensor:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "parkingSensor:TRIG",
+      "esp:5",
+      "green",
+      []
+    ],
+    [
+      "parkingSensor:ECHO",
+      "esp:18",
+      "blue",
+      []
+    ],
+    [
+      "eta:VCC",
+      "esp:3V3",
+      "red",
+      []
+    ],
+    [
+      "eta:GND",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "eta:SIG",
+      "esp:34",
+      "green",
+      []
+    ],
+    [
+      "red:A",
+      "esp:25",
+      "red",
+      []
+    ],
+    [
+      "red:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "green:A",
+      "esp:26",
+      "green",
+      []
+    ],
+    [
+      "green:C",
+      "esp:GND.1",
+      "black",
+      []
+    ]
+  ],
+  "dependencies": {}
+}

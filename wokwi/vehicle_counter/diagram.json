@@ -1,0 +1,194 @@
+{
+  "version": 1,
+  "author": "TransitSense",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-devkit-c-v4",
+      "id": "esp",
+      "top": 20,
+      "left": 0,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "bike",
+      "top": -100,
+      "left": 300,
+      "attrs": {
+        "color": "green",
+        "bounce": "0"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "car",
+      "top": 0,
+      "left": 300,
+      "attrs": {
+        "color": "blue",
+        "bounce": "0"
+      }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "heavy",
+      "top": 100,
+      "left": 300,
+      "attrs": {
+        "color": "red",
+        "bounce": "0"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "bikeLed",
+      "top": -100,
+      "left": 520,
+      "attrs": {
+        "color": "green"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "carLed",
+      "top": 0,
+      "left": 520,
+      "attrs": {
+        "color": "blue"
+      }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "heavyLed",
+      "top": 100,
+      "left": 520,
+      "attrs": {
+        "color": "red"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text1",
+      "top": -192,
+      "left": 268.8,
+      "attrs": {
+        "text": " VEHICLE COUNTING & CLASSIFICATION SYSTEM"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text3",
+      "top": -96,
+      "left": 374.4,
+      "attrs": {
+        "text": "Two-wheeler"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text4",
+      "top": 0,
+      "left": 384,
+      "attrs": {
+        "text": "Car"
+      }
+    },
+    {
+      "type": "wokwi-text",
+      "id": "text5",
+      "top": 96,
+      "left": 384,
+      "attrs": {
+        "text": "Heavy vehicle"
+      }
+    }
+  ],
+  "connections": [
+    [
+      "esp:TX",
+      "$serialMonitor:RX",
+      "",
+      []
+    ],
+    [
+      "esp:RX",
+      "$serialMonitor:TX",
+      "",
+      []
+    ],
+    [
+      "bike:1.l",
+      "esp:4",
+      "green",
+      []
+    ],
+    [
+      "bike:2.l",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "car:1.l",
+      "esp:16",
+      "blue",
+      []
+    ],
+    [
+      "car:2.l",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "heavy:1.l",
+      "esp:17",
+      "red",
+      []
+    ],
+    [
+      "heavy:2.l",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "bikeLed:A",
+      "esp:25",
+      "green",
+      []
+    ],
+    [
+      "bikeLed:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "carLed:A",
+      "esp:26",
+      "blue",
+      []
+    ],
+    [
+      "carLed:C",
+      "esp:GND.1",
+      "black",
+      []
+    ],
+    [
+      "heavyLed:A",
+      "esp:27",
+      "red",
+      []
+    ],
+    [
+      "heavyLed:C",
+      "esp:GND.1",
+      "black",
+      []
+    ]
+  ],
+  "dependencies": {}
+}

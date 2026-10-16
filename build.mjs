@@ -25,6 +25,7 @@ const modules = {
   siren: './dist/siren.mjs',
   sensorcode: './dist/sensor-code.mjs',
   hardware: './dist/hardware.mjs',
+  live: './dist/live.mjs',
 };
 const specifiers = {
   './vendor/OrbitControls.js': 'orbit',
@@ -33,6 +34,7 @@ const specifiers = {
   './siren.mjs': 'siren',
   './sensor-code.mjs': 'sensorcode',
   './hardware.mjs': 'hardware',
+  './live.mjs': 'live',
 };
 const rewrite = source => source.replace(/from '(\.\/[^']+)'/g, (match, path) => specifiers[path] ? `from '${specifiers[path]}'` : match);
 const dataUrl = path => 'data:text/javascript;base64,' + (path.includes('/vendor/three') ? readFileSync(url(path)) : Buffer.from(rewrite(read(path)))).toString('base64');

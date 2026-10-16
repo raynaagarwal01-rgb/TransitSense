@@ -19,6 +19,12 @@ The [`hardware/`](hardware/) folder holds ESP32 / Arduino sketches for each sens
 (TFmini-S LiDAR, 2× INMP441 microphones, QMC5883L magnetometer, ESP32-CAM) and the Python bay
 predictor that runs on the server. They compile on ESP32 core 3.x but have not been tested on physical hardware yet. See [hardware/README.md](hardware/README.md) for parts and wiring.
 
+## Live Wokwi link
+
+The four Wokwi simulations in [`wokwi/`](wokwi/) send their events to the site over MQTT: press the car
+button in the vehicle-counter simulation and a car drives over the sensor on the website. The
+header shows **Wokwi live** when the site is connected. See [wokwi/README.md](wokwi/README.md) to set it up.
+
 ## Run
 
 - **Quick:** open `transitsense.html` (single self-contained file) in a current browser.
