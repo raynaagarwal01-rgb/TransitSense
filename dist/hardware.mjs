@@ -108,7 +108,7 @@ export const SENSORS = {
       ['Optional: QMC5883L (GY-271)', 'Real vehicle counting and class (set USE_QMC5883L 1)'],
     ],
     wiring: [['BOOT button', 'GPIO0 (on the board)'], ['Blue LED', 'GPIO2 (on the board)'], ['WS2812B DIN', 'GPIO4 (through 330 Ω)'], ['TFmini-S TX · RX', 'GPIO16 · GPIO17'], ['GY-271 SDA · SCL', 'GPIO21 · GPIO22'], ['Sensors 5V / 3.3V · GND', 'TFmini-S and ring 5V · GY-271 3.3V · GND']],
-    code: ['website_bridge.ino'],
+    code: ['website_bridge.ino', 'wokwi_sketch.ino'],
     toolchain: 'Arduino-ESP32 core 3.x · library: ArduinoJson 7 (plus Adafruit NeoPixel if USE_NEOPIXEL is 1)',
     model: devkitModel,
   },

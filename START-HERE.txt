@@ -32,6 +32,12 @@ the expected departures and arrivals, then drives your car to the predicted bay.
 Rush hour makes the garage fill up, so you can see the "no bay" case and the
 suggested later arrival time. Show or hide the roof.
 
+CONNECT YOUR WOKWI SIMULATION
+Run the Wokwi project (hardware/wokwi, or wokwi.com/projects/477997762957224961),
+then click ESP32 at the top of the site, choose Wokwi · Wi-Fi and Connect to Wokwi.
+Sensor A then B near (under 50 cm) sends a car to the blind junction, Emergency
+dispatches the ambulance, the vehicle buttons send vehicles through the counter.
+
 CONNECT YOUR ESP32
 Flash hardware/website_bridge/website_bridge.ino, plug the board into your computer by
 USB, open the site in Chrome or Edge and click ESP32 at the top, then Connect ESP32.

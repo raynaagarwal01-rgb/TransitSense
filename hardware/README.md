@@ -6,12 +6,33 @@ Real ESP32 / Arduino versions of the four sensors in the simulation. The website
 
 | Demo | Sensor | Controller | Sketch |
 |---|---|---|---|
+| **Wokwi simulation (all four systems)** | 3× HC-SR04, 4 buttons, knob, LEDs, buzzer | Simulated ESP32 DevKitC | [`wokwi/`](wokwi/sketch.ino) |
 | **Live link to the website** | BOOT button + blue LED (optional TFmini-S, QMC5883L, WS2812B) | Any ESP32 dev board | [`website_bridge/`](website_bridge/website_bridge.ino) |
 | Junction warning | Benewake TFmini-S LiDAR (one per approach) + WS2812B LED ring | ESP32 DevKitC | [`junction_warning/`](junction_warning/junction_warning.ino) |
 | Ambulance priority | 2× INMP441 I²S MEMS microphone + PC817 optocoupler | ESP32 DevKitC | [`siren_priority/`](siren_priority/siren_priority.ino) |
 | Magnetic signature | QMC5883L magnetometer (GY-271 module) | ESP32 DevKitC | [`magnetic_counter/`](magnetic_counter/magnetic_counter.ino) |
 | Predictive parking | AI-Thinker ESP32-CAM (OV2640), one per zone | ESP32-CAM | [`parking_camera/`](parking_camera/parking_camera.ino) |
 | Predictive parking (server) | — | Any computer with Python 3.10+ | [`parking_server/bay_predictor.py`](parking_server/bay_predictor.py) |
+
+## Wokwi simulation (no hardware needed)
+
+[`wokwi/`](wokwi/) holds the Wokwi project ([open it in Wokwi](https://wokwi.com/projects/477997762957224961)):
+one simulated ESP32 runs all four systems (two HC-SR04s for the junction, an Emergency button,
+three vehicle-class buttons, and a parking bay HC-SR04 with an arrival-time knob). It connects
+through `Wokwi-GUEST` Wi-Fi and publishes every change to the public MQTT broker
+`broker.hivemq.com` on `transitsense/live/<junction|priority|counter|parking>`.
+
+1. Start the simulation in Wokwi (wait for "Connected to the TransitSense website feed" in its Serial Monitor).
+2. On the website, click **ESP32** → **Wokwi · Wi-Fi** → **Connect to Wokwi**.
+3. Move a car past Sensor A then Sensor B (drag their distance below 50 cm): a car arrives at the blind
+   junction and the posts turn red. Press **Emergency**: the ambulance is dispatched with its siren.
+   Press **Two-wheeler / Car / Heavy vehicle**: that vehicle drives through the counter.
+   Turn the parking knob while on the parking demo: your arrival time follows it.
+4. The other way round: **Dispatch ambulance** on the website turns the Wokwi signal green, and each
+   system's **Flash** button blinks its LEDs in Wokwi.
+
+The topics are public: anyone running this sketch shares them. For a private feed, change
+`TOPIC_PREFIX` in the sketch and open the site with `?broker=` pointing at your own broker if needed.
 
 ## Connect your ESP32 to the website
 

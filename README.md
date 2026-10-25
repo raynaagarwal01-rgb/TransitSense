@@ -13,9 +13,11 @@ An interactive Three.js concept showcase of smart-traffic features at a resident
 
 Every sensor label marked **i** opens the real hardware: a rotating 3D model of the module, how it works, parts and ESP32 wiring, and the Arduino code.
 
-## Connect a real ESP32
+## Connect your Wokwi simulation or a real ESP32
 
-Flash [`hardware/website_bridge`](hardware/website_bridge/website_bridge.ino) onto an ESP32, plug it into your computer, and click **ESP32** at the top of the site (Chrome or Edge on a computer). The board's BOOT button and optional sensors drive the 3D city, and its LED mirrors the simulation. Steps in [hardware/README.md](hardware/README.md#connect-your-esp32-to-the-website).
+**Wokwi:** run the [Wokwi project](https://wokwi.com/projects/477997762957224961) (also saved in [`hardware/wokwi`](hardware/wokwi/)), then on the site click **ESP32 → Wokwi · Wi-Fi → Connect to Wokwi**. The simulated board's sensors and buttons drive the junction, ambulance and counter demos over MQTT, and the website can turn its signal green or flash its lights.
+
+**USB board:** flash [`hardware/website_bridge`](hardware/website_bridge/website_bridge.ino) onto an ESP32, plug it into your computer, and click **ESP32** at the top of the site (Chrome or Edge on a computer). The board's BOOT button and optional sensors drive the 3D city, and its LED mirrors the simulation. Steps in [hardware/README.md](hardware/README.md#connect-your-esp32-to-the-website).
 
 ## Hardware
 

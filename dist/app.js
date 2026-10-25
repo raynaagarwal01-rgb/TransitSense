@@ -3,6 +3,7 @@ import {OrbitControls} from './vendor/OrbitControls.js';
 import {classifySignature,planArrival,nextOpening,DEMAND} from './model.mjs';
 import {createSiren} from './siren.mjs';
 import {createEsp32Link} from './esp32.mjs';
+import {createLiveFeed} from './live.mjs';
 import {SENSORS,openHardware,initHardware} from './hardware.mjs';
 import {DISTRICTS,createTraffic,spawnVehicle,stepTraffic,requestAmbulance,trafficLight,vehiclePosition,vehicleOnRoad,residentialWarnings} from './traffic.mjs';
 const $=id=>document.getElementById(id);
@@ -197,7 +198,7 @@ function renderPanel(){const c=config[current];$('district').textContent=c.distr
  if(current==='s5'){$('extra').innerHTML='<label class="arrival" for="eta"><span>Your arrival time</span><strong><span id="eta-label">'+eta+'</span> min from now</strong></label><input id="eta" type="range" min="1" max="30" value="'+eta+'"><div class="parking-stats"><div><span>FREE RIGHT NOW</span><strong id="free-now"></strong></div><div class="predicted"><span>FREE ON ARRIVAL</span><strong id="free-arrival"></strong></div></div><div class="bay-card" id="bay-card"><span class="bay-kicker">PREDICTED BAY FOR YOU</span><div class="bay-main"><strong id="bay-id"></strong><em id="bay-where"></em></div><p id="bay-why"></p></div>';$('eta').addEventListener('input',e=>{eta=Number(e.target.value);if(parkPlay)resetParking();updateForecast()});secondary('Show roof',()=>{roofVisible=!roofVisible;roof.visible=roofVisible;document.querySelector('#secondary button').textContent=roofVisible?'Cutaway view':'Show roof';worldLabels.forEach(l=>{if(l.el.textContent.includes('CAM'))l.el.style.visibility=roofVisible?'hidden':''})});const rush=secondary('Rush hour',()=>{demand=demand==='rush'?'normal':'rush';markRush();if(parkPlay)resetParking();updateForecast()}),markRush=()=>{rush.setAttribute('aria-pressed',demand==='rush');rush.style.borderColor=demand==='rush'?'var(--amber)':''};markRush();secondary('Reset',()=>{resetParking();$('trigger-label').textContent=c.action;updateForecast()});updateForecast()}
 }
 function clearFocus(){if(focusCar){world.remove(focusCar.mesh);vehicles.splice(vehicles.indexOf(focusCar),1);focusCar=null}}
-function sendS1(approach=true){clearFocus();focusCar=spawn('Car',approach?'residential-0':'residential-2',approach?-56:24,{forced:true,departing:!approach});focusCar.outgoing=!approach;status(approach?'Vehicle approaching':'Departing vehicle ignored',approach?'Its post stays green; the other three turn red. Vehicles yield before crossing.':'Distance is increasing. The vehicle stays in its correct lane.')}
+function sendS1(approach=true,start=approach?-56:24){clearFocus();focusCar=spawn('Car',approach?'residential-0':'residential-2',start,{forced:true,departing:!approach});focusCar.outgoing=!approach;status(approach?'Vehicle approaching':'Departing vehicle ignored',approach?'Its post stays green; the other three turn red. Vehicles yield before crossing.':'Distance is increasing. The vehicle stays in its correct lane.')}
 $('trigger').addEventListener('click',()=>{
  if(paused)togglePause();
  if(current==='s1')sendS1();
@@ -249,7 +250,7 @@ function deviceMessage(m){
  else if(m.event==='depart'){goScene('s1');sendS1(false)}
  else if(m.event==='vehicle'){goScene('s3');vehicleType={'two-wheeler':'Two-wheeler',truck:'Truck'}[m.class]||'Car';renderPanel();$('trigger').click()}
 }
-function deviceStatus(state){const on=state==='connected';$('esp32-btn').classList.toggle('on',on);$('esp32-connect').textContent=on?'Disconnect':'Connect ESP32';$('esp32-state').textContent=on?'Connected · waiting for the board…':state==='lost'?'Board disconnected':'Not connected';if(!on){$('esp32-live').textContent='';$('esp32-sensors').textContent=''}deviceLedKey='';deviceLog(on?'USB port opened':state==='lost'?'Board unplugged':'Disconnected',state==='lost'?'warn':'')}
+function deviceStatus(state){const on=state==='connected';markDeviceButton();$('esp32-connect').textContent=on?'Disconnect':'Connect ESP32';$('esp32-state').textContent=on?'Connected · waiting for the board…':state==='lost'?'Board disconnected':'Not connected';if(!on){$('esp32-live').textContent='';$('esp32-sensors').textContent=''}deviceLedKey='';deviceLog(on?'USB port opened':state==='lost'?'Board unplugged':'Disconnected',state==='lost'?'warn':'')}
 // What the board's LEDs should show: mode/color for an LED ring, board for the single-colour on-board LED.
 function deviceLed(){
  if(current==='s1'){const red=residentialWarnings(traffic,fault).includes('red');return fault?{mode:'fast',color:LED_RED,board:'fast'}:red?{mode:'on',color:LED_RED,board:'on'}:{mode:'on',color:LED_GREEN,board:'off'}}
@@ -265,6 +266,55 @@ addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('esp32-panel').hidden)tog
 $('esp32-sketch').addEventListener('click',()=>{toggleDevicePanel(false);openHardware('bridge','code')});
 $('esp32-connect').addEventListener('click',async()=>{if(esp.connected){esp.disconnect();return}try{await esp.connect()}catch(e){if(e.name!=='NotFoundError')deviceLog('Could not open the port: '+e.message,'warn')}});
 if(!esp.supported){$('esp32-connect').disabled=true;$('esp32-help').textContent='This browser can’t open USB devices. Open the site in Chrome or Edge on a computer to connect your ESP32.'}
+
+// ---------- Wokwi live feed over MQTT (hardware/wokwi/sketch.ino) ----------
+const live=createLiveFeed({url:new URLSearchParams(location.search).get('broker')||undefined,onMessage:liveMessage,onStatus:liveStatus});
+const liveSystems={junction:{},priority:{},counter:{},parking:{}};
+const markDeviceButton=()=>$('esp32-btn').classList.toggle('on',esp.connected||live.connected);
+function liveDetail(system,text){liveSystems[system].detail=text;renderLiveSystems()}
+function renderLiveSystems(){for(const li of document.querySelectorAll('#live-systems li')){const s=liveSystems[li.dataset.system],online=s.seen&&Date.now()-s.seen<25000;li.classList.toggle('online',!!online);li.querySelector('em').textContent=online?(s.detail||'online'):'offline'}}
+setInterval(renderLiveSystems,2000);
+function liveMessage(system,text){
+ if(!(system in liveSystems))return;
+ let m;try{m=JSON.parse(text)}catch{return}
+ const s=liveSystems[system];s.seen=Date.now();
+ if(m.state==='online'||m.state==='ack'){renderLiveSystems();return}
+ if(system==='junction'){
+  liveDetail('junction',m.state+' · A '+m.a+' cm · B '+m.b+' cm');
+  const previous=s.state;s.state=m.state;if(previous===m.state)return;
+  deviceLog('Wokwi junction: '+m.state+' (A '+m.a+' cm, B '+m.b+' cm)',m.state==='warning'||m.state==='fault'?'warn':'');
+  if(m.state==='fault'){goScene('s1');fault=true;return}
+  if(previous==='fault')fault=false;
+  if(m.state==='warning'){goScene('s1');if(paused)togglePause();sendS1(true,-34)}
+ }else if(system==='priority'){
+  liveDetail('priority',m.state==='active'?'ambulance green':'normal cycle');
+  deviceLog('Wokwi emergency: '+(m.state==='active'?'button pressed, ambulance dispatched':'priority ended'));
+  if(m.state==='active'){goScene('s2');$('trigger').click()}
+ }else if(system==='counter'&&m.state==='detected'){
+  const type={bike:'Two-wheeler',heavy:'Truck'}[m.vehicle]||'Car';
+  liveDetail('counter',m.total+' counted · '+m.bikes+' two-wheelers · '+m.cars+' cars · '+m.heavy+' heavy');
+  deviceLog('Wokwi counter: '+type.toLowerCase()+' (total '+m.total+')');
+  goScene('s3');vehicleType=type;renderPanel();$('trigger').click();
+ }else if(system==='parking'){
+  liveDetail('parking',m.state+' · '+m.distance+' cm · arrival '+m.eta+' min');
+  deviceLog('Wokwi parking: bay '+m.state+', arrival in '+m.eta+' min');
+  if(current==='s5'&&$('eta')){eta=Math.max(1,Math.min(30,m.eta||1));$('eta').value=eta;if(parkPlay)resetParking();updateForecast()}
+ }
+}
+function liveStatus(state){
+ const on=state==='connected';
+ $('live-state').textContent={connecting:'Connecting to the Wokwi feed…',connected:'Connected · waiting for Wokwi messages',reconnecting:'Connection lost · retrying…',refused:'The broker refused the connection',failed:'Could not reach the broker',disconnected:'Not connected'}[state]||state;
+ $('live-connect').textContent=state==='disconnected'||state==='failed'?'Connect to Wokwi':'Disconnect';
+ markDeviceButton();
+ if(on||state==='disconnected'||state==='reconnecting')deviceLog(on?'Wokwi feed connected ('+live.url.replace(/^wss?:\/\//,'').split('/')[0]+')':state==='reconnecting'?'Wokwi feed lost, retrying':'Wokwi feed disconnected',state==='reconnecting'?'warn':'');
+}
+$('live-connect').addEventListener('click',()=>{const start=$('live-connect').textContent.startsWith('Connect');if(start)live.connect();else live.disconnect();try{localStorage.setItem('transitsense-live',start?'on':'off')}catch{}});
+for(const b of document.querySelectorAll('[data-identify]'))b.addEventListener('click',()=>{if(live.publish('cmd/'+b.dataset.identify,{cmd:'identify'}))deviceLog('Asked Wokwi to flash the '+b.dataset.identify+' lights');else deviceLog('Connect to the Wokwi feed first','warn')});
+// Dispatching the ambulance on the website also turns the Wokwi signal green.
+$('trigger').addEventListener('click',e=>{if(e.isTrusted&&current==='s2'&&live.publish('cmd/priority',{cmd:'priority'}))deviceLog('Asked Wokwi for emergency priority')});
+function showLinkTab(tab){for(const b of document.querySelectorAll('[data-esp-tab]'))b.setAttribute('aria-selected',b.dataset.espTab===tab);for(const p of document.querySelectorAll('[data-esp-pane]'))p.hidden=p.dataset.espPane!==tab;try{localStorage.setItem('transitsense-link-tab',tab)}catch{}}
+for(const b of document.querySelectorAll('[data-esp-tab]'))b.addEventListener('click',()=>showLinkTab(b.dataset.espTab));
+try{showLinkTab(localStorage.getItem('transitsense-link-tab')||'wokwi');if(localStorage.getItem('transitsense-live')==='on')live.connect()}catch{showLinkTab('wokwi')}
 
 addEventListener('keydown',e=>{if(e.target.matches('input,button')||document.querySelector('dialog[open]'))return;if(e.code==='Space'){e.preventDefault();togglePause()}if(e.key==='+')zoom(.85);if(e.key==='-')zoom(1.18);if(e.key==='0')resetView()});
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
