@@ -13,6 +13,10 @@ An interactive Three.js concept showcase of smart-traffic features at a resident
 
 Every sensor label marked **i** opens the real hardware: a rotating 3D model of the module, how it works, parts and ESP32 wiring, and the Arduino code.
 
+## Connect a real ESP32
+
+Flash [`hardware/website_bridge`](hardware/website_bridge/website_bridge.ino) onto an ESP32, plug it into your computer, and click **ESP32** at the top of the site (Chrome or Edge on a computer). The board's BOOT button and optional sensors drive the 3D city, and its LED mirrors the simulation. Steps in [hardware/README.md](hardware/README.md#connect-your-esp32-to-the-website).
+
 ## Hardware
 
 The [`hardware/`](hardware/) folder holds ESP32 / Arduino sketches for each sensor

@@ -32,6 +32,13 @@ the expected departures and arrivals, then drives your car to the predicted bay.
 Rush hour makes the garage fill up, so you can see the "no bay" case and the
 suggested later arrival time. Show or hide the roof.
 
+CONNECT YOUR ESP32
+Flash hardware/website_bridge/website_bridge.ino, plug the board into your computer by
+USB, open the site in Chrome or Edge and click ESP32 at the top, then Connect ESP32.
+Short-press BOOT to run the current demo's action, hold it to dispatch the ambulance.
+The blue LED mirrors the simulation. Optional TFmini-S / QMC5883L sensors drive the
+junction and magnetic demos with real vehicles.
+
 REAL HARDWARE
 Click any sensor label marked "i" in the city, or "Hardware & code" in the panel,
 to see the real sensor (3D model), how it works, parts, ESP32 wiring and the

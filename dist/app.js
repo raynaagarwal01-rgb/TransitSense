@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {OrbitControls} from './vendor/OrbitControls.js';
 import {classifySignature,planArrival,nextOpening,DEMAND} from './model.mjs';
 import {createSiren} from './siren.mjs';
+import {createEsp32Link} from './esp32.mjs';
 import {SENSORS,openHardware,initHardware} from './hardware.mjs';
 import {DISTRICTS,createTraffic,spawnVehicle,stepTraffic,requestAmbulance,trafficLight,vehiclePosition,vehicleOnRoad,residentialWarnings} from './traffic.mjs';
 const $=id=>document.getElementById(id);
@@ -228,9 +229,46 @@ $('zoom-in').addEventListener('click',()=>zoom(.85));$('zoom-out').addEventListe
 initHardware($('hw-dialog'));$('hw-link').addEventListener('click',()=>openHardware(config[current].hw));
 function setSound(on){siren.setEnabled(on);$('sound').setAttribute('aria-pressed',on);$('sound').setAttribute('aria-label',on?'Turn siren sound off':'Turn siren sound on');$('sound').classList.toggle('muted',!on);try{localStorage.setItem('transitsense-sound',on?'on':'off')}catch{}}
 let savedSound=null;try{savedSound=localStorage.getItem('transitsense-sound')}catch{}setSound(savedSound!=='off');$('sound').addEventListener('click',()=>setSound(!siren.enabled));
+// ---------- ESP32 live link (hardware/website_bridge) ----------
+const esp=createEsp32Link({onMessage:deviceMessage,onStatus:deviceStatus});let deviceLedKey='',deviceLedAt=0;
+const LED_RED=[255,0,0],LED_GREEN=[0,255,60],LED_AMBER=[255,150,0];
+function goScene(id){if(current!==id){history.replaceState(null,'','#'+id);choose(id)}}
+function deviceLog(text,kind=''){const li=document.createElement('li');li.className=kind;li.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})+'  '+text;const log=$('esp32-log');log.prepend(li);while(log.children.length>8)log.lastChild.remove()}
+function eventText(m){return m.event==='button'?'BOOT pressed: '+config[current].action:m.event==='siren'?'BOOT held: ambulance dispatched':m.event==='approach'?'LiDAR: vehicle approaching':m.event==='depart'?'LiDAR: vehicle leaving':m.event==='vehicle'?'Magnetometer: '+m.class+' ('+m.peak_mg+' mG, '+m.duration_s+' s)':'Event: '+m.event}
+function deviceMessage(m){
+ if(m.type==='heartbeat')return;
+ if(m.type==='reading'){$('esp32-live').textContent=m.sensor==='lidar'?'LiDAR distance: '+(m.distance_cm/100).toFixed(2)+' m':'Magnetic disturbance: '+m.deviation_mg+' mG';return}
+ if(m.type==='text'){deviceLog(m.text,'dim');return}
+ if(m.type==='hello'){$('esp32-state').textContent='Connected · '+(m.device||'ESP32');$('esp32-sensors').textContent='Inputs: '+(m.sensors||[]).join(', ');deviceLedKey='';deviceLog('Board says hello ('+(m.device||'unknown board')+')');return}
+ if(m.type==='fault'&&m.sensor==='lidar'){goScene('s1');fault=!!m.active;deviceLog(fault?'LiDAR silent: posts fail safe to red':'LiDAR restored',fault?'warn':'');return}
+ if(m.type!=='event')return;
+ deviceLog(eventText(m));
+ if(m.event==='button')$('trigger').click();
+ else if(m.event==='siren'){goScene('s2');$('trigger').click()}
+ else if(m.event==='approach'){goScene('s1');$('trigger').click()}
+ else if(m.event==='depart'){goScene('s1');sendS1(false)}
+ else if(m.event==='vehicle'){goScene('s3');vehicleType={'two-wheeler':'Two-wheeler',truck:'Truck'}[m.class]||'Car';renderPanel();$('trigger').click()}
+}
+function deviceStatus(state){const on=state==='connected';$('esp32-btn').classList.toggle('on',on);$('esp32-connect').textContent=on?'Disconnect':'Connect ESP32';$('esp32-state').textContent=on?'Connected · waiting for the board…':state==='lost'?'Board disconnected':'Not connected';if(!on){$('esp32-live').textContent='';$('esp32-sensors').textContent=''}deviceLedKey='';deviceLog(on?'USB port opened':state==='lost'?'Board unplugged':'Disconnected',state==='lost'?'warn':'')}
+// What the board's LEDs should show: mode/color for an LED ring, board for the single-colour on-board LED.
+function deviceLed(){
+ if(current==='s1'){const red=residentialWarnings(traffic,fault).includes('red');return fault?{mode:'fast',color:LED_RED,board:'fast'}:red?{mode:'on',color:LED_RED,board:'on'}:{mode:'on',color:LED_GREEN,board:'off'}}
+ if(current==='s2'){const j=traffic.junctions[1];if(j.priority)return j.stage==='priority'?{mode:'on',color:LED_GREEN,board:'on'}:{mode:'fast',color:LED_RED,board:'fast'};const s=trafficLight(j,0);return {mode:'on',color:s==='green'?LED_GREEN:s==='amber'?LED_AMBER:LED_RED,board:'off'}}
+ if(current==='s5'){const full=(parkPlay?parkPlay.plan:parkingPlan()).bay===null;return full?{mode:'blink',color:LED_RED,board:'blink'}:{mode:'on',color:LED_GREEN,board:'off'}}
+ return {mode:'off',color:[0,0,0],board:'off'};
+}
+function syncDevice(){const now=performance.now();if(!esp.connected||now-deviceLedAt<200)return;deviceLedAt=now;const led=deviceLed(),key=JSON.stringify(led);if(key!==deviceLedKey){deviceLedKey=key;esp.send({cmd:'led',...led})}}
+function toggleDevicePanel(open=$('esp32-panel').hidden){$('esp32-panel').hidden=!open;$('esp32-btn').setAttribute('aria-expanded',open)}
+$('esp32-btn').addEventListener('click',()=>toggleDevicePanel());
+document.addEventListener('click',e=>{if(e.isTrusted&&!$('esp32-panel').hidden&&!e.target.closest('#esp32-panel,#esp32-btn'))toggleDevicePanel(false)});
+addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('esp32-panel').hidden)toggleDevicePanel(false)});
+$('esp32-sketch').addEventListener('click',()=>{toggleDevicePanel(false);openHardware('bridge','code')});
+$('esp32-connect').addEventListener('click',async()=>{if(esp.connected){esp.disconnect();return}try{await esp.connect()}catch(e){if(e.name!=='NotFoundError')deviceLog('Could not open the port: '+e.message,'warn')}});
+if(!esp.supported){$('esp32-connect').disabled=true;$('esp32-help').textContent='This browser can’t open USB devices. Open the site in Chrome or Edge on a computer to connect your ESP32.'}
+
 addEventListener('keydown',e=>{if(e.target.matches('input,button')||document.querySelector('dialog[open]'))return;if(e.code==='Space'){e.preventDefault();togglePause()}if(e.key==='+')zoom(.85);if(e.key==='-')zoom(1.18);if(e.key==='0')resetView()});
 addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
-function signature(v){const values=v.type==='Two-wheeler'?[.25,.7]:v.type==='Truck'?[1,2]:[.65,1.2];const classified=classifySignature(...values);counts[classified]++;lastSignature={type:classified,at:time,peak:values[0],width:values[1]};if(current!=='s3')return;$('count-bike').textContent=counts['Two-wheeler'];$('count-car').textContent=counts.Car;$('count-truck').textContent=counts.Truck;$('wave-type').textContent=classified+' detected';const path=[];for(let i=0;i<=130;i++){const x=i*2,t=(i-65)/(values[1]*9);const y=26-Math.sin(t*2.2)*Math.exp(-t*t*.3)*values[0]*22;path.push((i?'L':'M')+x+' '+y.toFixed(2))}$('wave').setAttribute('d',path.join(' '));status(classified+' signature detected',Object.values(counts).reduce((a,b)=>a+b,0)+' vehicles counted · waveform classification illustrated.')}
+function signature(v){const values=v.type==='Two-wheeler'?[.25,.7]:v.type==='Truck'?[1,2]:[.65,1.2];const classified=classifySignature(...values);counts[classified]++;if(current==='s3'&&esp.connected)esp.send({cmd:'flash',color:classified==='Truck'?LED_AMBER:classified==='Two-wheeler'?[80,160,255]:[255,255,255],ms:250});lastSignature={type:classified,at:time,peak:values[0],width:values[1]};if(current!=='s3')return;$('count-bike').textContent=counts['Two-wheeler'];$('count-car').textContent=counts.Car;$('count-truck').textContent=counts.Truck;$('wave-type').textContent=classified+' detected';const path=[];for(let i=0;i<=130;i++){const x=i*2,t=(i-65)/(values[1]*9);const y=26-Math.sin(t*2.2)*Math.exp(-t*t*.3)*values[0]*22;path.push((i?'L':'M')+x+' '+y.toFixed(2))}$('wave').setAttribute('d',path.join(' '));status(classified+' signature detected',Object.values(counts).reduce((a,b)=>a+b,0)+' vehicles counted · waveform classification illustrated.')}
 function tick(dt){
  time+=dt;
  const before=new Map(vehicles.map(v=>[v.id,v.p]));
@@ -275,5 +313,5 @@ function tick(dt){
  }
  bayLabel.el.style.visibility=current==='s5'&&bayLabel.shown?'':'hidden';youLabel.el.style.visibility=current==='s5'&&parkPlay&&parkPlay.you&&parkPlay.you.parent?'':'hidden';
 }
-const projected=new THREE.Vector3();let previous=performance.now();function animate(){const now=performance.now();requestAnimationFrame(animate);const dt=Math.max(0,Math.min((now-previous)/1000,.05));previous=now;if(!paused)tick(dt*speed);controls.update();pulses.forEach((p,i)=>{const s=1+Math.sin(time*1.6-i)*.06;p.scale.set(s,s,s);p.material.opacity=.28+Math.sin(time*2-i)*.12});for(const l of worldLabels){projected.copy(l.position).project(camera);const x=(projected.x*.5+.5)*innerWidth,y=(-projected.y*.5+.5)*innerHeight;l.el.style.left=x+'px';l.el.style.top=y+'px';l.el.style.display=projected.z>1||x<0||x>innerWidth||y<(innerWidth<701?175:90)||y>innerHeight-115?'none':''}renderer.render(scene,camera)}
+const projected=new THREE.Vector3();let previous=performance.now();function animate(){const now=performance.now();requestAnimationFrame(animate);const dt=Math.max(0,Math.min((now-previous)/1000,.05));previous=now;if(!paused)tick(dt*speed);syncDevice();controls.update();pulses.forEach((p,i)=>{const s=1+Math.sin(time*1.6-i)*.06;p.scale.set(s,s,s);p.material.opacity=.28+Math.sin(time*2-i)*.12});for(const l of worldLabels){projected.copy(l.position).project(camera);const x=(projected.x*.5+.5)*innerWidth,y=(-projected.y*.5+.5)*innerHeight;l.el.style.left=x+'px';l.el.style.top=y+'px';l.el.style.display=projected.z>1||x<0||x>innerWidth||y<(innerWidth<701?175:90)||y>innerHeight-115?'none':''}renderer.render(scene,camera)}
 buildScene();choose(location.hash.slice(1)||'s1');if(!location.hash)resetView('overview');if(paused){paused=false;togglePause()}$('loading').classList.add('loaded');requestAnimationFrame(animate);

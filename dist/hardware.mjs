@@ -90,6 +90,28 @@ export const SENSORS = {
     toolchain: 'Arduino-ESP32 core 3.x (board: AI Thinker ESP32-CAM) · server: Python 3.10+',
     model: cameraModel,
   },
+  bridge: {
+    name: 'ESP32 DevKitC · website bridge',
+    role: 'Live link · your ESP32 talks to this website over USB',
+    chips: ['Web Serial API', 'USB · 115200 baud', 'JSON messages', 'Chrome or Edge on a computer'],
+    how: [
+      'Flash the bridge sketch, plug the ESP32 into your computer and click “ESP32” at the top of the website. The browser’s Web Serial API opens the USB port directly: no app, server or Wi-Fi needed.',
+      'The ESP32 sends events to the website as one line of JSON each. A short press on the BOOT button runs the current demo’s main action; a long press dispatches the ambulance. With the optional sensors switched on, a real vehicle approaching the TFmini-S sends a car into the junction demo, and a vehicle passing the QMC5883L is counted and classified in the magnetic demo.',
+      'The website sends the simulation’s state back. The blue on-board LED lights for a cross-traffic warning, blinks fast for a sensor fault or while the junction clears for the ambulance, blinks when the garage is predicted full and flashes for every vehicle counted. A WS2812B ring shows the matching red, amber or green.',
+    ],
+    flow: ['BOOT button or sensor detects something', 'ESP32 sends a JSON event over USB', 'The website runs it in the 3D city', 'The simulation’s state comes back to the LED'],
+    parts: [
+      ['ESP32 DevKitC (or any ESP32 dev board)', 'Runs the bridge sketch; BOOT button and blue LED are on the board'],
+      ['USB data cable', 'Connects the board to your computer (charge-only cables will not work)'],
+      ['Optional: WS2812B ring or strip', 'Shows the simulation’s colour (set USE_NEOPIXEL 1)'],
+      ['Optional: Benewake TFmini-S LiDAR', 'Real approaching / departing vehicles (set USE_TFMINI 1)'],
+      ['Optional: QMC5883L (GY-271)', 'Real vehicle counting and class (set USE_QMC5883L 1)'],
+    ],
+    wiring: [['BOOT button', 'GPIO0 (on the board)'], ['Blue LED', 'GPIO2 (on the board)'], ['WS2812B DIN', 'GPIO4 (through 330 Ω)'], ['TFmini-S TX · RX', 'GPIO16 · GPIO17'], ['GY-271 SDA · SCL', 'GPIO21 · GPIO22'], ['Sensors 5V / 3.3V · GND', 'TFmini-S and ring 5V · GY-271 3.3V · GND']],
+    code: ['website_bridge.ino'],
+    toolchain: 'Arduino-ESP32 core 3.x · library: ArduinoJson 7 (plus Adafruit NeoPixel if USE_NEOPIXEL is 1)',
+    model: devkitModel,
+  },
 };
 
 // ---------- 3D models (units: centimetres) ----------
@@ -177,6 +199,25 @@ function cameraModel() {
   header(g, 8, -1.2, 0, true);
   smd(g, -.9, 1.7);
   smd(g, -.6, 1.7, .1, '#2a2a2a');
+  return g;
+}
+
+function devkitModel() {
+  const g = new THREE.Group();
+  add(g, box(2.8, .12, 5.4), M('#1c2024'), 0, 0, 0);
+  add(g, box(1.8, .3, 2.5), STEEL(), 0, .21, -1.05);
+  add(g, box(1.8, .02, .55), M('#121518'), 0, .07, -2.6);
+  for (let i = 0; i < 5; i++) add(g, box(.08, .02, .4), GOLD(), -.6 + i * .3, .085, -2.6);
+  add(g, box(.75, .28, .55), STEEL(), 0, .2, 2.5);
+  add(g, box(.5, .18, .3), M('#151515'), -.5, .15, 1.3);
+  for (const x of [-.95, .95]) {
+    add(g, box(.42, .14, .32), M('#d8d8d0'), x, .13, 2.05);
+    add(g, cyl(.11, .08), M('#1a1a1a'), x, .23, 2.05);
+  }
+  add(g, box(.16, .07, .1), M('#4aa8ff', {emissive: '#2f7fd8'}), .55, .1, 1.65);
+  add(g, box(.16, .07, .1), M('#ff5c4d', {emissive: '#a8261c'}), .55, .1, 1.35);
+  header(g, 15, 1.27, .3, true);
+  header(g, 15, -1.27, .3, true);
   return g;
 }
 
