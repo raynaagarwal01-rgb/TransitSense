@@ -57,8 +57,9 @@ void loop() {
     if (!nearA && !nearB && (now - lastSeen >= HOLD_MS)) { warningActive = false; seenA = false; event(F("depart")); }
   }
 
-  if (warningActive) setLights(HIGH, LOW, LOW);
-  else if (nearA || nearB || seenA) setLights(LOW, HIGH, LOW);
-  else setLights(LOW, LOW, HIGH);
+  bool fast = (now / 200) % 2 == 0, slow = (now / 600) % 2 == 0;  // blink phases
+  if (warningActive) setLights(fast, LOW, LOW);                    // red blinks fast
+  else if (nearA || nearB || seenA) setLights(LOW, fast, LOW);     // yellow blinks fast
+  else setLights(LOW, LOW, slow);                                  // green blinks slowly
   delay(80);
 }
