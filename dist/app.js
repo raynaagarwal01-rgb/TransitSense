@@ -233,6 +233,7 @@ function setSound(on){siren.setEnabled(on);$('sound').setAttribute('aria-pressed
 let savedSound=null;try{savedSound=localStorage.getItem('transitsense-sound')}catch{}setSound(savedSound!=='off');$('sound').addEventListener('click',()=>setSound(!siren.enabled));
 // ---------- ESP32 live link (hardware/website_bridge) ----------
 const esp=createEsp32Link({onMessage:deviceMessage,onStatus:deviceStatus});let deviceLedKey='',deviceLedAt=0;
+const esp2=createEsp32Link({onMessage:deviceMessage,onStatus:st=>{deviceLog(st==='connected'?'Second board connected':st==='lost'?'Second board unplugged':'Second board disconnected',st==='lost'?'warn':'');markDeviceButton();$('esp32-connect2').textContent=esp2.connected?'Disconnect second board':'Connect second board'}});
 const LED_RED=[255,0,0],LED_GREEN=[0,255,60],LED_AMBER=[255,150,0];
 function goScene(id){if(current!==id){history.replaceState(null,'','#'+id);choose(id)}}
 function deviceLog(text,kind=''){const li=document.createElement('li');li.className=kind;li.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})+'  '+text;const log=$('esp32-log');log.prepend(li);while(log.children.length>8)log.lastChild.remove()}
@@ -268,12 +269,13 @@ document.addEventListener('click',e=>{if(e.isTrusted&&!$('esp32-panel').hidden&&
 addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('esp32-panel').hidden)toggleDevicePanel(false)});
 $('esp32-sketch').addEventListener('click',()=>{toggleDevicePanel(false);openHardware('bridge','code')});
 $('esp32-connect').addEventListener('click',async()=>{if(esp.connected){esp.disconnect();return}try{await esp.connect()}catch(e){if(e.name!=='NotFoundError')deviceLog('Could not open the port: '+e.message,'warn')}});
+$('esp32-connect2').addEventListener('click',async()=>{if(esp2.connected){esp2.disconnect();return}try{await esp2.connect()}catch(e){if(e.name!=='NotFoundError')deviceLog('Could not open the port: '+e.message,'warn')}});
 if(!esp.supported){$('esp32-connect').disabled=true;$('esp32-help').textContent='This browser can’t open USB devices. Open the site in Chrome or Edge on a computer to connect your ESP32.'}
 
 // ---------- Wokwi live feed over MQTT (hardware/wokwi/sketch.ino) ----------
 const live=createLiveFeed({url:new URLSearchParams(location.search).get('broker')||undefined,onMessage:liveMessage,onStatus:liveStatus});
 const liveSystems={junction:{},priority:{},counter:{},parking:{}};
-const markDeviceButton=()=>$('esp32-btn').classList.toggle('on',esp.connected||live.connected);
+const markDeviceButton=()=>$('esp32-btn').classList.toggle('on',esp.connected||esp2.connected||live.connected);
 function liveDetail(system,text){liveSystems[system].detail=text;renderLiveSystems()}
 function renderLiveSystems(){for(const li of document.querySelectorAll('#live-systems li')){const s=liveSystems[li.dataset.system],online=s.seen&&Date.now()-s.seen<25000;li.classList.toggle('online',!!online);li.querySelector('em').textContent=online?(s.detail||'online'):'offline'}}
 setInterval(renderLiveSystems,2000);
