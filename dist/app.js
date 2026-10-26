@@ -171,7 +171,7 @@ function resetView(mode=viewMode){
 }
 function buildScene(){
  seed=17;world.clear();for(const m of pulses){m.geometry.dispose();m.material.dispose()}worldLabels.forEach(l=>l.el.remove());
- traffic=createTraffic();vehicles=traffic.vehicles;signals=[];beacons=[];pulses=[];worldLabels=[];slots=[];batches.clear();districtLabels.clear();focusCar=null;ambulanceCar=null;fault=false;priority=null;echoUntil=0;forecastActive=false;roofVisible=false;parkPlay=null;parkMovers=[];counts={'Two-wheeler':0,Car:0,Truck:0};lastSignature=null;
+ hwCount=false;traffic=createTraffic();vehicles=traffic.vehicles;signals=[];beacons=[];pulses=[];worldLabels=[];slots=[];batches.clear();districtLabels.clear();focusCar=null;ambulanceCar=null;fault=false;priority=null;echoUntil=0;forecastActive=false;roofVisible=false;parkPlay=null;parkMovers=[];counts={'Two-wheeler':0,Car:0,Truck:0};lastSignature=null;
  surroundings();
  const residential=DISTRICTS[0],busy=DISTRICTS[1];
  for(const [a,[x,z]] of [[3.2,-8.5],[-8.5,-3.2],[-3.2,8.5],[8.5,3.2]].entries())beacon(residential.x+x,residential.z+z,a);
@@ -197,7 +197,7 @@ function renderPanel(){const c=config[current];$('district').textContent=c.distr
  if(current==='s3'){$('extra').innerHTML='<div class="stats"><div class="stat"><strong id="count-bike">'+counts['Two-wheeler']+'</strong><span>Two-wheelers</span></div><div class="stat"><strong id="count-car">'+counts.Car+'</strong><span>Cars</span></div><div class="stat"><strong id="count-truck">'+counts.Truck+'</strong><span>Trucks</span></div></div><svg class="waveform" viewBox="0 0 260 52" role="img" aria-label="Simulated magnetic waveform"><path class="wave-grid" d="M0 26h260M65 0v52M130 0v52M195 0v52"/><path id="wave" d="M0 26h260"/></svg><div class="wave-caption"><span id="wave-type">Awaiting a signature</span><span>ΔB / time</span></div>';for(const t of ['Two-wheeler','Car','Truck']){const b=secondary(t,()=>{vehicleType=t;$('trigger-label').textContent='Send '+(t==='Car'?'a car':t==='Truck'?'a truck':'a two-wheeler');document.querySelectorAll('#secondary button').forEach(el=>el.style.borderColor='');b.style.borderColor='var(--accent)'});if(t===vehicleType)b.style.borderColor='var(--accent)'}status('Sensor ready','Each detected pass is counted once.');$('trigger-label').textContent='Send '+(vehicleType==='Car'?'a car':vehicleType==='Truck'?'a truck':'a two-wheeler')}
  if(current==='s5'){$('extra').innerHTML='<label class="arrival" for="eta"><span>Your arrival time</span><strong><span id="eta-label">'+eta+'</span> min from now</strong></label><input id="eta" type="range" min="1" max="30" value="'+eta+'"><div class="parking-stats"><div><span>FREE RIGHT NOW</span><strong id="free-now"></strong></div><div class="predicted"><span>FREE ON ARRIVAL</span><strong id="free-arrival"></strong></div></div><div class="bay-card" id="bay-card"><span class="bay-kicker">PREDICTED BAY FOR YOU</span><div class="bay-main"><strong id="bay-id"></strong><em id="bay-where"></em></div><p id="bay-why"></p></div>';$('eta').addEventListener('input',e=>{eta=Number(e.target.value);if(parkPlay)resetParking();updateForecast()});secondary('Show roof',()=>{roofVisible=!roofVisible;roof.visible=roofVisible;document.querySelector('#secondary button').textContent=roofVisible?'Cutaway view':'Show roof';worldLabels.forEach(l=>{if(l.el.textContent.includes('CAM'))l.el.style.visibility=roofVisible?'hidden':''})});const rush=secondary('Rush hour',()=>{demand=demand==='rush'?'normal':'rush';markRush();if(parkPlay)resetParking();updateForecast()}),markRush=()=>{rush.setAttribute('aria-pressed',demand==='rush');rush.style.borderColor=demand==='rush'?'var(--amber)':''};markRush();secondary('Reset',()=>{resetParking();$('trigger-label').textContent=c.action;updateForecast()});updateForecast()}
 }
-let hazardCar=null;
+let hazardCar=null,hwCount=false;
 function clearFocus(){if(hazardCar){world.remove(hazardCar.mesh);vehicles.splice(vehicles.indexOf(hazardCar),1);hazardCar=null}if(focusCar){world.remove(focusCar.mesh);vehicles.splice(vehicles.indexOf(focusCar),1);focusCar=null}}
 function sendS1(approach=true,start=approach?-56:24){clearFocus();focusCar=spawn('Car',approach?'residential-0':'residential-2',start,{forced:true,departing:!approach});focusCar.outgoing=!approach;status(approach?'Vehicle approaching':'Departing vehicle ignored',approach?'Its post stays green; the other three turn red. Vehicles yield before crossing.':'Distance is increasing. The vehicle stays in its correct lane.')}
 $('trigger').addEventListener('click',()=>{
@@ -250,7 +250,7 @@ function deviceMessage(m){
  else if(m.event==='approach'){goScene('s1');$('trigger').click()}
  else if(m.event==='hazard'){goScene('s1');sendS1(true);hazardCar=spawn('Car','residential-0',-63,{forced:true})}
  else if(m.event==='depart'){goScene('s1');sendS1(false)}
- else if(m.event==='vehicle'){goScene('s3');vehicleType={'two-wheeler':'Two-wheeler',truck:'Truck'}[m.class]||'Car';renderPanel();$('trigger').click()}
+ else if(m.event==='vehicle'){goScene('s3');vehicleType={'two-wheeler':'Two-wheeler',truck:'Truck'}[m.class]||'Car';if(!hwCount){hwCount=true;for(let i=vehicles.length-1;i>=0;i--)if(!vehicles[i].forced){world.remove(vehicles[i].mesh);vehicles.splice(i,1)}counts={'Two-wheeler':0,Car:0,Truck:0}}renderPanel();spawn(vehicleType,'busy-0',-24,{forced:true});status(vehicleType+' from the board','Counted when it passes the sensor.')}
 }
 function deviceStatus(state){const on=state==='connected';markDeviceButton();$('esp32-connect').textContent=on?'Disconnect':'Connect ESP32';$('esp32-state').textContent=on?'Connected · waiting for the board…':state==='lost'?'Board disconnected':'Not connected';if(!on){$('esp32-live').textContent='';$('esp32-sensors').textContent=''}deviceLedKey='';deviceLog(on?'USB port opened':state==='lost'?'Board unplugged':'Disconnected',state==='lost'?'warn':'')}
 // What the board's LEDs should show: mode/color for an LED ring, board for the single-colour on-board LED.
@@ -327,7 +327,7 @@ function tick(dt){
  for(const v of stepTraffic(traffic,dt)){world.remove(v.mesh);if(v===focusCar)focusCar=null;if(v===ambulanceCar)ambulanceCar=null}
  for(const v of vehicles){
   positionVehicle(v);
-  if(v.route.junction==='busy'&&v.route.axis===0&&!v.counted&&before.get(v.id)<3&&v.p>=3){v.counted=true;signature(v)}
+  if(v.route.junction==='busy'&&v.route.axis===0&&!v.counted&&(!hwCount||v.forced)&&before.get(v.id)<3&&v.p>=3){v.counted=true;signature(v)}
   if(v.type==='Ambulance')v.mesh.userData.flash.visible=Math.floor(time*8)%2===0;
  }
  if(ambulanceCar&&current==='s2'&&siren.enabled){
