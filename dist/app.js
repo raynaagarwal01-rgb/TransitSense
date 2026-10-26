@@ -250,7 +250,7 @@ function deviceMessage(m){
  else if(m.event==='approach'){goScene('s1');$('trigger').click()}
  else if(m.event==='hazard'){goScene('s1');sendS1(true);hazardCar=spawn('Car','residential-0',-63,{forced:true})}
  else if(m.event==='depart'){goScene('s1');sendS1(false)}
- else if(m.event==='vehicle'){goScene('s3');vehicleType={'two-wheeler':'Two-wheeler',truck:'Truck'}[m.class]||'Car';if(!hwCount){hwCount=true;for(let i=vehicles.length-1;i>=0;i--)if(!vehicles[i].forced){world.remove(vehicles[i].mesh);vehicles.splice(i,1)}counts={'Two-wheeler':0,Car:0,Truck:0}}renderPanel();spawn(vehicleType,'busy-0',-8,{forced:true});status(vehicleType+' from the board','Counted when it passes the sensor.')}
+ else if(m.event==='vehicle'){goScene('s3');vehicleType={'two-wheeler':'Two-wheeler',truck:'Truck'}[m.class]||'Car';if(!hwCount){hwCount=true;for(let i=vehicles.length-1;i>=0;i--)if(!vehicles[i].forced){world.remove(vehicles[i].mesh);vehicles.splice(i,1)}counts={'Two-wheeler':0,Car:0,Truck:0}}renderPanel();{const v=spawn(vehicleType,'busy-'+Math.floor(Math.random()*4),-60,{forced:true});v.live=true;v.speed=13}status(vehicleType+' from the board','Counted when it passes the sensor.')}
 }
 function deviceStatus(state){const on=state==='connected';markDeviceButton();$('esp32-connect').textContent=on?'Disconnect':'Connect ESP32';$('esp32-state').textContent=on?'Connected · waiting for the board…':state==='lost'?'Board disconnected':'Not connected';if(!on){$('esp32-live').textContent='';$('esp32-sensors').textContent=''}deviceLedKey='';deviceLog(on?'USB port opened':state==='lost'?'Board unplugged':'Disconnected',state==='lost'?'warn':'')}
 // What the board's LEDs should show: mode/color for an LED ring, board for the single-colour on-board LED.
@@ -327,7 +327,7 @@ function tick(dt){
  for(const v of stepTraffic(traffic,dt)){world.remove(v.mesh);if(v===focusCar)focusCar=null;if(v===ambulanceCar)ambulanceCar=null}
  for(const v of vehicles){
   positionVehicle(v);
-  if(v.route.junction==='busy'&&v.route.axis===0&&!v.counted&&(!hwCount||v.forced)&&before.get(v.id)<3&&v.p>=3){v.counted=true;signature(v)}
+  if(v.route.junction==='busy'&&(v.route.axis===0||v.live)&&!v.counted&&(!hwCount||v.forced)&&before.get(v.id)<3&&v.p>=3){v.counted=true;signature(v)}
   if(v.type==='Ambulance')v.mesh.userData.flash.visible=Math.floor(time*8)%2===0;
  }
  if(ambulanceCar&&current==='s2'&&siren.enabled){

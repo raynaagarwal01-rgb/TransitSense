@@ -79,7 +79,7 @@ export function stepTraffic(traffic,dt){
         const v=lane[i],leader=lane[i-1];let limit=Infinity;
         if(leader)limit=leader.p-(leader.length+v.length)/2-FOLLOWING_GAP;
         const stop=-j.stopLine-v.length/2;
-        if(v.p<=stop+.00001){
+        if(v.p<=stop+.00001&&!v.live){
           const exitBlocked=leader&&leader.p-leader.length/2<j.stopLine+v.length+FOLLOWING_GAP;
           if((j.signalized?trafficLight(j,route.approach)!=='green':j.reservation!==v.id)||exitBlocked)limit=Math.min(limit,stop);
         }
