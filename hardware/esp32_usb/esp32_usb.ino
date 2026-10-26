@@ -19,11 +19,23 @@ VehicleClass classes[] = {
 };
 
 // ---- Smart parking ----
-const int S_TRIG = 2, S_ECHO = 36, S_ETA_PIN = 39, S_RED = 12, S_GREEN = 27;
+const int S_TRIG = 2, S_ECHO = 36, S_ETA_PIN = 39, S_RED = 26, S_GREEN = 25;
 const float S_OCCUPIED_CM = 50.0;
 const int S_RELEASE_MIN = 10;
 const char *lastParkingState = "";
 int lastParkingEta = -1;
+
+// Ultrasonic reader with short timeouts so it can never hang the loop
+float readParkingDistance() {
+  digitalWrite(S_TRIG, LOW); delayMicroseconds(4);
+  digitalWrite(S_TRIG, HIGH); delayMicroseconds(10);
+  digitalWrite(S_TRIG, LOW);
+  unsigned long startWait = micros();
+  while (digitalRead(S_ECHO) == LOW) if (micros() - startWait > 8000) return -1;
+  unsigned long startPulse = micros();
+  while (digitalRead(S_ECHO) == HIGH) if (micros() - startPulse > 15000) return -1;
+  return (micros() - startPulse) / 58.2;
+}
 
 void sendEvent(const char *name) {
   Serial.print("{\"type\":\"event\",\"event\":\""); Serial.print(name); Serial.println("\"}");
@@ -35,7 +47,8 @@ void setup() {
   pinMode(P_RED, OUTPUT); pinMode(P_YELLOW, OUTPUT); pinMode(P_GREEN, OUTPUT); pinMode(BUZZER, OUTPUT);
   for (auto &c : classes) { pinMode(c.button, INPUT_PULLUP); pinMode(c.led, OUTPUT); }
   pinMode(S_TRIG, OUTPUT); pinMode(S_ECHO, INPUT); pinMode(S_RED, OUTPUT); pinMode(S_GREEN, OUTPUT);
-  digitalWrite(P_RED, HIGH);  // priority signal red until an emergency
+  digitalWrite(P_RED, HIGH);    // priority signal red until an emergency
+  digitalWrite(S_GREEN, HIGH);  // parking green (available) by default
   delay(1500);                // let the website finish opening the port
   Serial.println("{\"type\":\"hello\",\"device\":\"esp32-priority-counter-parking\",\"sensors\":[\"priority-button\",\"vehicle-buttons\",\"parking-sensor\"]}");
 }
@@ -81,11 +94,7 @@ void parkingStep() {
   unsigned long now = millis();
   if (now - lastSample < 600) return;  // never blocks the buttons
   lastSample = now;
-  digitalWrite(S_TRIG, LOW); delayMicroseconds(2);
-  digitalWrite(S_TRIG, HIGH); delayMicroseconds(10);
-  digitalWrite(S_TRIG, LOW);
-  unsigned long dur = pulseIn(S_ECHO, HIGH, 12000UL);
-  float distance = dur == 0 ? -1 : dur / 58.2;
+  float distance = readParkingDistance();
   int eta = map(analogRead(S_ETA_PIN), 0, 4095, 0, 20);
 
   const char *state = (distance < 0 || distance > S_OCCUPIED_CM) ? "available" : eta >= S_RELEASE_MIN ? "predicted-free" : "occupied";
