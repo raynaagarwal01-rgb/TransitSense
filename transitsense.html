@@ -325,7 +325,7 @@ function deviceMessage(m){
  else if(m.event==='siren'){goScene('s2');if(priority){buildScene();$('trigger').disabled=false}$('trigger').click()}
  else if(m.event==='approach'){goScene('s1');$('trigger').click()}
  else if(m.event==='hazard'){goScene('s1');sendS1(true);hazardCar=spawn('Car','residential-0',-63,{forced:true})}
- else if(m.event==='parking'){goScene('s5');if($('eta')){eta=Math.max(1,Math.min(30,m.eta||1));$('eta').value=eta;if(parkPlay)resetParking();updateForecast()}}
+ else if(m.event==='parking'){const e=Math.max(1,Math.min(30,m.eta||1));if(current!=='s5'&&Math.abs(e-eta)>=3)goScene('s5');if(current==='s5'&&$('eta')){eta=e;$('eta').value=eta;if(parkPlay)resetParking();updateForecast()}}
  else if(m.event==='depart'){goScene('s1');sendS1(false)}
  else if(m.event==='vehicle'){goScene('s3');vehicleType={'two-wheeler':'Two-wheeler',truck:'Truck'}[m.class]||'Car';if(!hwCount){hwCount=true;for(let i=vehicles.length-1;i>=0;i--)if(!vehicles[i].forced){world.remove(vehicles[i].mesh);vehicles.splice(i,1)}counts={'Two-wheeler':0,Car:0,Truck:0}}renderPanel();{const v=spawn(vehicleType,'busy-'+Math.floor(Math.random()*4),-60,{forced:true});v.live=true;v.speed=v.velocity=30}status(vehicleType+' from the board','Counted when it passes the sensor.')}
 }
