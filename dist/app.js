@@ -236,7 +236,7 @@ const esp=createEsp32Link({onMessage:deviceMessage,onStatus:deviceStatus});let d
 const LED_RED=[255,0,0],LED_GREEN=[0,255,60],LED_AMBER=[255,150,0];
 function goScene(id){if(current!==id){history.replaceState(null,'','#'+id);choose(id)}}
 function deviceLog(text,kind=''){const li=document.createElement('li');li.className=kind;li.textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})+'  '+text;const log=$('esp32-log');log.prepend(li);while(log.children.length>8)log.lastChild.remove()}
-function eventText(m){return m.event==='button'?'BOOT pressed: '+config[current].action:m.event==='siren'?'BOOT held: ambulance dispatched':m.event==='approach'?'LiDAR: vehicle approaching':m.event==='hazard'?'Both sensors tripped: two cars close together, RED warning':m.event==='depart'?'LiDAR: vehicle leaving':m.event==='vehicle'?'Magnetometer: '+m.class+' ('+m.peak_mg+' mG, '+m.duration_s+' s)':'Event: '+m.event}
+function eventText(m){return m.event==='button'?'BOOT pressed: '+config[current].action:m.event==='siren'?'BOOT held: ambulance dispatched':m.event==='approach'?'LiDAR: vehicle approaching':m.event==='parking'?'Parking sensor: bay '+m.state+', arrival in '+m.eta+' min ('+m.distance+' cm)':m.event==='hazard'?'Both sensors tripped: two cars close together, RED warning':m.event==='depart'?'LiDAR: vehicle leaving':m.event==='vehicle'?'Magnetometer: '+m.class+' ('+m.peak_mg+' mG, '+m.duration_s+' s)':'Event: '+m.event}
 function deviceMessage(m){
  if(m.type==='heartbeat')return;
  if(m.type==='reading'){$('esp32-live').textContent=m.sensor==='lidar'?'LiDAR distance: '+(m.distance_cm/100).toFixed(2)+' m':'Magnetic disturbance: '+m.deviation_mg+' mG';return}
@@ -249,6 +249,7 @@ function deviceMessage(m){
  else if(m.event==='siren'){goScene('s2');if(priority){buildScene();$('trigger').disabled=false}$('trigger').click()}
  else if(m.event==='approach'){goScene('s1');$('trigger').click()}
  else if(m.event==='hazard'){goScene('s1');sendS1(true);hazardCar=spawn('Car','residential-0',-63,{forced:true})}
+ else if(m.event==='parking'){goScene('s5');if($('eta')){eta=Math.max(1,Math.min(30,m.eta||1));$('eta').value=eta;if(parkPlay)resetParking();updateForecast()}}
  else if(m.event==='depart'){goScene('s1');sendS1(false)}
  else if(m.event==='vehicle'){goScene('s3');vehicleType={'two-wheeler':'Two-wheeler',truck:'Truck'}[m.class]||'Car';if(!hwCount){hwCount=true;for(let i=vehicles.length-1;i>=0;i--)if(!vehicles[i].forced){world.remove(vehicles[i].mesh);vehicles.splice(i,1)}counts={'Two-wheeler':0,Car:0,Truck:0}}renderPanel();{const v=spawn(vehicleType,'busy-'+Math.floor(Math.random()*4),-60,{forced:true});v.live=true;v.speed=v.velocity=30}status(vehicleType+' from the board','Counted when it passes the sensor.')}
 }
