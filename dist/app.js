@@ -246,7 +246,7 @@ function deviceMessage(m){
  if(m.type!=='event')return;
  deviceLog(eventText(m));
  if(m.event==='button')$('trigger').click();
- else if(m.event==='siren'){goScene('s2');$('trigger').click()}
+ else if(m.event==='siren'){goScene('s2');if(priority){buildScene();$('trigger').disabled=false}$('trigger').click()}
  else if(m.event==='approach'){goScene('s1');$('trigger').click()}
  else if(m.event==='hazard'){goScene('s1');sendS1(true);hazardCar=spawn('Car','residential-0',-63,{forced:true})}
  else if(m.event==='depart'){goScene('s1');sendS1(false)}

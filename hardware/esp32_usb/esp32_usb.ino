@@ -31,8 +31,14 @@ void setup() {
 void priorityStep() {
   unsigned long now = millis();
   bool pressed = digitalRead(P_BUTTON) == LOW;
+  static bool wasPressed = false;
+  static unsigned long lastPress = 0;
+  if (pressed && !wasPressed && now - lastPress >= DEBOUNCE_MS) {
+    lastPress = now;
+    sendEvent("siren");  // every new press dispatches an ambulance on the site
+  }
+  wasPressed = pressed;
   if (pressed) {
-    if (!pActive) sendEvent("siren");  // ambulance dispatched on the site
     pActive = true;
     pStart = now;
   }
